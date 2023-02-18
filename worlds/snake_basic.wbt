@@ -1,0 +1,40 @@
+#VRML_SIM R2022a utf8
+WorldInfo {
+  contactProperties [
+    ContactProperties {
+      material2 "body"
+    }
+  ]
+}
+Viewpoint {
+  orientation -0.1668859490554307 0.051926670687832556 0.9846078919443748 2.547044282426018
+  position 4.395864077437657 -2.7259832160433923 1.9113863689260713
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 4 4
+  floorTileSize 4 4
+  floorAppearance Parquetry {
+    type "light strip"
+  }
+  wallHeight 0.5
+}
+PlasticCrate {
+  translation -1.5 1.5 0
+  size 0.2 0.2 0.2
+}
+Salamander {
+  translation 0 0 0.04
+  rotation 0 0 1 2.35619
+  controller "snake_basic"
+  extensionSlot [
+    Camera {
+      fieldOfView 1.22
+      width 120
+      height 80
+    }
+  ]
+}
