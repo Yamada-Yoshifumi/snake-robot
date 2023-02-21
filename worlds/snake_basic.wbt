@@ -29,7 +29,7 @@ PlasticCrate {
 Salamander {
   translation 0 0 0.04
   rotation 0 0 1 2.35619
-  controller "snake_basic"
+  controller "<extern>"
   extensionSlot [
     Camera {
       fieldOfView 1.22
