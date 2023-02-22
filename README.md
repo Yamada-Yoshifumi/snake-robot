@@ -20,7 +20,7 @@ To start webots simulation without ROS, simply open the worlds/snake_basic.wbt f
   Salamander {
     translation 0 0 0.04
     rotation 0 0 1 2.35619
-    controller "<extern>"
+    controller "\<extern\>"
     name "salamander"
     extensionSlot [
       Camera {
