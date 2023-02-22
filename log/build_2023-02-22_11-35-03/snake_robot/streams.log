@@ -1,0 +1,46 @@
+[0.408s] Invoking command in '/home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot': PYTHONPATH=/home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot/prefix_override:/home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py develop --editable --build-directory /home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot/build --no-deps install_data
+[0.545s] /usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'script-dir' will not be supported in future versions. Please use the underscore name 'script_dir' instead
+[0.545s]   warnings.warn(
+[0.562s] running develop
+[0.562s] /usr/lib/python3/dist-packages/setuptools/command/easy_install.py:158: EasyInstallDeprecationWarning: easy_install command is deprecated. Use build and pip and other standards-based tools.
+[0.562s]   warnings.warn(
+[0.563s] /usr/lib/python3/dist-packages/setuptools/command/install.py:34: SetuptoolsDeprecationWarning: setup.py install is deprecated. Use build and pip and other standards-based tools.
+[0.563s]   warnings.warn(
+[0.594s] /usr/lib/python3/dist-packages/pkg_resources/__init__.py:116: PkgResourcesDeprecationWarning: 0.1.43ubuntu1 is an invalid version and will not be supported in a future release
+[0.594s]   warnings.warn(
+[0.594s] /usr/lib/python3/dist-packages/pkg_resources/__init__.py:116: PkgResourcesDeprecationWarning: 1.1build1 is an invalid version and will not be supported in a future release
+[0.594s]   warnings.warn(
+[0.654s] running egg_info
+[0.654s] creating snake_robot.egg-info
+[0.654s] writing snake_robot.egg-info/PKG-INFO
+[0.654s] writing dependency_links to snake_robot.egg-info/dependency_links.txt
+[0.654s] writing entry points to snake_robot.egg-info/entry_points.txt
+[0.654s] writing requirements to snake_robot.egg-info/requires.txt
+[0.654s] writing top-level names to snake_robot.egg-info/top_level.txt
+[0.654s] writing manifest file 'snake_robot.egg-info/SOURCES.txt'
+[0.656s] reading manifest file 'snake_robot.egg-info/SOURCES.txt'
+[0.656s] writing manifest file 'snake_robot.egg-info/SOURCES.txt'
+[0.683s] running build_ext
+[0.683s] Creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/lib/python3.10/site-packages/snake-robot.egg-link (link to .)
+[0.683s] Installing snake_basic script to /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/lib/snake_robot
+[0.683s] Installing trajectory_recording script to /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/lib/snake_robot
+[0.683s] 
+[0.683s] Installed /home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot
+[0.684s] running install_data
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/ament_index
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/ament_index/resource_index
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/ament_index/resource_index/packages
+[0.684s] copying resource/snake_robot -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/ament_index/resource_index/packages
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/launch
+[0.684s] copying launch/snake_robot.launch.py -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/launch
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/worlds
+[0.684s] copying worlds/snake_basic.wbt -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/worlds
+[0.684s] copying package.xml -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/controllers
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/controllers/snake_basic
+[0.684s] copying controllers/snake_basic/controller.py -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/controllers/snake_basic
+[0.684s] copying controllers/snake_basic/snake_basic.py -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/controllers/snake_basic
+[0.684s] creating /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/libraries
+[0.684s] copying libraries/controller.py -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/libraries
+[0.684s] copying libraries/vehicle.py -> /home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/share/snake_robot/libraries
+[0.702s] Invoked command in '/home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot' returned '0': PYTHONPATH=/home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot/prefix_override:/home/ameyasu/ros2_ws/src/snake_robot/install/snake_robot/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py develop --editable --build-directory /home/ameyasu/ros2_ws/src/snake_robot/build/snake_robot/build --no-deps install_data

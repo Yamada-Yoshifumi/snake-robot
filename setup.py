@@ -8,6 +8,7 @@ data_files.append(('share/' + package_name + '/worlds', ['worlds/snake_basic.wbt
 data_files.append(('share/' + package_name, ['package.xml']))
 data_files.append(('share/' + package_name + '/controllers/snake_basic', ['controllers/snake_basic/controller.py', 'controllers/snake_basic/snake_basic.py']))
 data_files.append(('share/' + package_name + '/libraries', ['libraries/controller.py', 'libraries/vehicle.py']))
+data_files.append(('share/' + package_name + '/resource', ['resource/salamander.urdf']))
 
 setup(
  name=package_name,
@@ -24,7 +25,7 @@ setup(
  entry_points={
      'console_scripts': [
              'trajectory_recording = snake_robot.trajectory_recording:main',
-             'snake_basic = snake_robot.snake_basic'
+             'my_robot_driver = snake_robot.my_robot_driver:main',
      ],
    },
 )

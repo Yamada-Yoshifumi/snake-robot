@@ -49,6 +49,7 @@ Salamander {
   translation 0.975796 -0.975796 0.04
   rotation 0 0 1 2.35619
   controller "<extern>"
+  name "salamander"
   extensionSlot [
     Camera {
       fieldOfView 1.22
