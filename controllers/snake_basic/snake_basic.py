@@ -10,6 +10,47 @@ import numpy as np
 from controller import Robot
 # from controller import Motor
 
+#********* HELPER FUNCTIONS *********#
+"""
+Put helper functions here. E.g., Gait equation, path selection, and obstacle avoidance
+"""
+
+def restrict(target_pos, min_pos, max_pos):
+    """
+    Clamps motor position to within min/max values 
+    """
+    if (min_pos == 0 and max_pos == 0):     # weird case, just remain unchanged
+        return target_pos
+    else:   # clamps value to limit
+        return max(min_pos, min(max_pos, target_pos))
+
+
+def get_image():
+    """
+    Gets image and convert into cv2 readable format
+
+    Reference: https://github.com/lukicdarkoo/webots-example-visual-tracking
+    """
+    # Get image after 1 step
+    # robot.step(timestep)          # UNCOMMENT IF IMG TYPE IS NONE
+    # cameraData = camera.getImage()
+    cameraData = camera.getImageArray()
+
+    # Process image into numpy array
+    # img = np.frombuffer(cameraData, np.uint8).reshape((img_height, img_width, 4))
+    # print(img)
+    img = np.asarray(cameraData, dtype=np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+
+    
+    # print(f"cv ver = {cv2.__version__ }")     # Debug
+    img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+    img_cv = cv2.rotate(img_cv, cv2.ROTATE_90_CLOCKWISE)
+    img_cv = cv2.flip(img_cv, 1)
+
+    return img_cv
+
 
 #********* START ROBOT *********#
 """
@@ -100,51 +141,6 @@ print(f"max motor pos = {max_motor_positions}") # Debug
 for i in range(NUM_MOTORS):
     motors[i].setPosition(0)
     # motors[i].setVelocity(float('inf'))
-
-
-
-
-#********* HELPER FUNCTIONS *********#
-"""
-Put helper functions here. E.g., Gait equation, path selection, and obstacle avoidance
-"""
-
-def restrict(target_pos, min_pos, max_pos):
-    """
-    Clamps motor position to within min/max values 
-    """
-    if (min_pos == 0 and max_pos == 0):     # weird case, just remain unchanged
-        return target_pos
-    else:   # clamps value to limit
-        return max(min_pos, min(max_pos, target_pos))
-
-
-def get_image():
-    """
-    Gets image and convert into cv2 readable format
-
-    Reference: https://github.com/lukicdarkoo/webots-example-visual-tracking
-    """
-    # Get image after 1 step
-    # robot.step(timestep)          # UNCOMMENT IF IMG TYPE IS NONE
-    # cameraData = camera.getImage()
-    cameraData = camera.getImageArray()
-
-    # Process image into numpy array
-    # img = np.frombuffer(cameraData, np.uint8).reshape((img_height, img_width, 4))
-    # print(img)
-    img = np.asarray(cameraData, dtype=np.uint8)
-    img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-
-    
-    # print(f"cv ver = {cv2.__version__ }")     # Debug
-    img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-
-    img_cv = cv2.rotate(img_cv, cv2.ROTATE_90_CLOCKWISE)
-    img_cv = cv2.flip(img_cv, 1)
-
-    return img_cv
-
 
 
 #********* MAIN CONTROL LOOP *********#

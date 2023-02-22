@@ -1,0 +1,60 @@
+#VRML_SIM R2022a utf8
+WorldInfo {
+  contactProperties [
+    ContactProperties {
+      material2 "body"
+    }
+  ]
+}
+Viewpoint {
+  orientation -0.5952147852916319 0.27990010028942086 0.7532431833267452 2.4549626972366614
+  position 1.6757415268659284 -1.4739096055449488 9.017176633052893
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 4 4
+  floorTileSize 4 4
+  floorAppearance Parquetry {
+    type "light strip"
+  }
+  wallHeight 0.5
+}
+OilBarrel {
+  translation -0.06 1.08 0.44
+  name "oil barrel(5)"
+}
+OilBarrel {
+  translation -0.82 0.37 0.44
+  name "oil barrel(4)"
+}
+OilBarrel {
+  translation -0.27 -0.2 0.44
+  name "oil barrel(3)"
+}
+OilBarrel {
+  translation 0.41 0.57 0.44
+  name "oil barrel(2)"
+}
+OilBarrel {
+  translation 0.94 -0.01 0.44
+  name "oil barrel(1)"
+}
+OilBarrel {
+  translation 0 -0.85 0.44
+}
+Salamander {
+  translation 0.975796 -0.975796 0.04
+  rotation 0 0 1 2.35619
+  controller "<extern>"
+  name "salamander"
+  extensionSlot [
+    Camera {
+      fieldOfView 1.22
+      width 120
+      height 80
+    }
+  ]
+}
