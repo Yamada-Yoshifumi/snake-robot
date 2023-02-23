@@ -1,0 +1,83 @@
+#VRML_SIM R2022a utf8
+WorldInfo {
+  info [
+    "Simulation of the YAMOR modular robot."
+    "The YAMOR robot goes through a sequence of module deconnections and reconnections while demonstrating two different types of locomotion."
+    "Biorobotics Laboratory, EPFL, Lausanne"
+    ""
+    "Publication:"
+    "R. Moeckel, C. Jaquier, K. Drapel, E. Dittrich, A. Upegui, and A.J. Ijspeert."
+    "Exploring adaptive locomotion with YaMoR, a novel autonomous modular robot with Bluetooth interface."
+    "Industrial Robot, 33(4):285-290, 2006."
+  ]
+  title "Modular Robot"
+  basicTimeStep 8
+  contactProperties [
+    ContactProperties {
+      coulombFriction [
+        1.8
+      ]
+    }
+  ]
+}
+Viewpoint {
+  orientation -0.26465797399846597 -0.16578955685654895 0.9499841996772033 3.981934064305251
+  position 0.9437668698116497 1.3708230115673345 1.372904261153073
+  follow "module_4"
+  followSmoothness 1
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Floor {
+  size 100 100
+}
+DEF MODULE_1 yamor-snake-model {
+  translation 0 0 0.03
+  rotation 1 0 0 0
+  name "module_1"
+  controller "yamor-snake-model"
+}
+DEF MODULE_2 yamor-snake-model {
+  translation -0.097 0 0.03
+  rotation 1 0 0 1.5708
+  name "module_2"
+  controller "yamor-snake-model"
+}
+DEF MODULE_3 yamor-snake-model {
+  translation -0.194 0 0.03
+  rotation 1 0 0 0
+  name "module_3"
+  controller "yamor-snake-model"
+}
+DEF MODULE_4 yamor-snake-model {
+  translation -0.291 0 0.03
+  rotation 1 0 0 1.5708
+  name "module_4"
+  controller "yamor-snake-model"
+}
+DEF MODULE_5 yamor-snake-model {
+  translation -0.388 0 0.03
+  rotation 1 0 0 0
+  name "module_5"
+  controller "yamor-snake-model"
+}
+DEF MODULE_6 yamor-snake-model {
+  translation -0.485 0 0.03
+  rotation 1 0 0 1.5708
+  name "module_6"
+  controller "yamor-snake-model"
+}
+#DEF MODULE_7 yamor-snake-model {
+#  translation -0.582 0 0.03
+#  rotation 1 0 0 0
+#  name "module_7"
+#  controller "yamor-snake-model"
+#}
+#DEF MODULE_8 yamor-snake-model {
+#  translation -0.679 0 0.03
+#  rotation 1 0 0 1.5708
+#  name "module_8"
+#  controller "yamor-snake-model"
+#}
