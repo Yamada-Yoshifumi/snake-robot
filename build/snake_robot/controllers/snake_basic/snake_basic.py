@@ -1,1 +1,0 @@
-/home/ameyasu/ros2_ws/src/snake_robot/controllers/snake_basic/snake_basic.py
