@@ -57,5 +57,7 @@ To start webots simulation with ROS, build the package, and do:
 <code>ros2 launch snake_robot snake_robot.launch.py</code>
 
 Code to source and build
-<code>colcon build --symlink-install</code>
-<code>source install/setup.bash</code>
+<code>
+colcon build --symlink-install
+source install/setup.bash
+</code>
