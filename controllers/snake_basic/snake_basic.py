@@ -72,7 +72,7 @@ print(f"simulation timestep = {timestep} ms")
 
 # !!!!!!!! TURN SNAKE MODE ON OR OFF !!!!!!!! #
 # True to keep legs, False to extend legs
-snake_mode = True   
+snake_mode = False  
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
 # Initial locomotion values
@@ -143,6 +143,128 @@ for i in range(NUM_MOTORS):
     # motors[i].setVelocity(float('inf'))
 
 
+
+
+#********* HELPER FUNCTIONS *********#
+"""
+Put helper functions here. E.g., Gait equation, path selection, and obstacle avoidance
+"""
+
+def restrict(target_pos, min_pos, max_pos):
+    """
+    Clamps motor position to within min/max values 
+    """
+    if (min_pos == 0 and max_pos == 0):     # weird case, just remain unchanged
+        return target_pos
+    else:   # clamps value to limit
+        return max(min_pos, min(max_pos, target_pos))
+
+
+def get_image():
+    """
+    Gets image and convert into cv2 readable format
+
+    Reference: https://github.com/lukicdarkoo/webots-example-visual-tracking
+    """
+    # Get image after 1 step
+    # robot.step(timestep)          # UNCOMMENT IF IMG TYPE IS NONE
+    # cameraData = camera.getImage()
+    cameraData = camera.getImageArray()
+
+    # Process image into numpy array
+    # img = np.frombuffer(cameraData, np.uint8).reshape((img_height, img_width, 4))
+    # print(img)
+    img = np.asarray(cameraData, dtype=np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+
+    
+    # print(f"cv ver = {cv2.__version__ }")     # Debug
+    img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+    img_cv = cv2.rotate(img_cv, cv2.ROTATE_90_CLOCKWISE)
+    img_cv = cv2.flip(img_cv, 1)
+
+    return img_cv
+
+
+def segmentation(img):
+    """
+    Segement the image into ground pixels and non-ground pixels.
+    Multiple methods will be implemented:
+    1. Naive thresholding (done)
+    2. SVM (TODO)
+    3. Others (TODO)
+    """
+    h, w, _ = img.shape
+    mid_w = int(np.floor(w / 2))
+    w_low = mid_w - int(np.floor(w / 10))
+    w_high = mid_w + int(np.floor(w / 10))
+    h_low = h - int(np.floor(h / 10))
+    ground_ref_img = img[h_low:h, w_low:w_high, :]    # 24x8 image, can be tuned later
+    # Debugging!
+    # print(ground_ref_img.shape)
+    # img_RGB = cv2.cvtColor(ground_ref_img, cv2.COLOR_HSV2RGB)
+    # cv2.namedWindow("Ground reference image")
+    # cv2.imshow("Ground reference image", img_RGB)
+    # cv2.waitKey(0)
+    # print(ground_ref_img)
+    tol = 10
+    low_H, low_S, low_V = np.min(ground_ref_img, axis=(0,1)) - tol
+    high_H, high_S, high_V = np.max(ground_ref_img, axis=(0,1)) + tol
+    # print(low_H, low_S, low_V, high_H, high_S, high_V)
+    mask = cv2.inRange(img, np.array([low_H, low_S, low_V]), np.array([high_H, high_S, high_V]))
+    # cv2.namedWindow("Mask")
+    # cv2.imshow("Mask", mask)
+    # cv2.waitKey(0)
+    return mask
+
+
+def trajectory_sampling(h, w):
+    """
+    Sample 5 trajectories (for now only 1) that will be tested,
+    return the end points (can be modified to return a whole trajectory).
+    """
+    # Without a motion model, I cannot determine where the snake head will land
+    # For now, I will only return one specific point for moving straight forward
+    mid_w = int(np.floor(w / 2))
+    h_forward = h - int(np.floor(h / 4))
+
+    candidate_points = []
+    candidate_points.append(np.array([h_forward, mid_w]))
+    return candidate_points
+
+
+def collision_check(mask, point):
+    """
+    Check whether the end point of a trajectory will collide with an obstacle,
+    using the ground segmentation mask.
+    """
+    return mask[point[0], point[1]]
+
+
+def get_direction(img):
+    h, w, _ = img.shape
+
+    # Get the ground segmentation mask
+    mask = segmentation(img)
+
+    # Sample some trajectories, return the end points
+    candidate_points = trajectory_sampling(h, w)
+
+    # Collision checking for the candidate points
+    # It can be extended to check the whole trajectory, instead of just the end points
+    # Will be changed for multiple points
+    for point in candidate_points:
+        if collision_check(mask, point):
+            return 0.0
+        else:
+            # For now, either move straight forward, or turn right if obstacle detected
+            return 0.3
+
+    # Should never reach here
+    return 0.0
+
+
 #********* MAIN CONTROL LOOP *********#
 """
 Put all actuation commands here. Robot basically runs this while loop and exits the loop when u press stop in Webots
@@ -159,8 +281,10 @@ while robot.step(timestep) != -1:
 
     ## ***** 2. Calculate output actuator commands here ***** ##
 
-    # Make robot go straight. But if you want it to turn, then adjust accordingly
-    spine_offset = 0.0
+    # (outdated)Make robot go straight. But if you want it to turn, then adjust accordingly
+    # Get the direction using trajectory sampling and collision checking in perception space
+    spine_offset = get_direction(img_cv)
+    print(spine_offset)
 
     # Increase phase according to elapsed time
     phase -= (timestep / 1000) * freq * 2 * np.pi
