@@ -1,0 +1,4 @@
+[console_scripts]
+my_robot_driver = snake_robot.my_robot_driver:main
+trajectory_recording = snake_robot.trajectory_recording:main
+
