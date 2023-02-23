@@ -72,7 +72,7 @@ print(f"simulation timestep = {timestep} ms")
 
 # !!!!!!!! TURN SNAKE MODE ON OR OFF !!!!!!!! #
 # True to keep legs, False to extend legs
-snake_mode = True   
+snake_mode = False   
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
 # Initial locomotion values
