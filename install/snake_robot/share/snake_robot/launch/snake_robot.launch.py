@@ -26,15 +26,9 @@ def generate_launch_description():
         ],
     )
 
-    trajectory_recorder = Node(
-        package='snake_robot',
-        executable='trajectory_recording',
-        output='screen',
-    )
 
     return LaunchDescription([
         webots,
-        trajectory_recorder,
         my_robot_driver,
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
@@ -42,5 +36,9 @@ def generate_launch_description():
                 on_exit=[launch.actions.EmitEvent(event=launch.events.Shutdown())],
             )
         ),
-        
+        launch_ros.actions.Node(
+            package='snake_robot',
+            executable='trajectory_recording',
+            ros_arguments=[],
+        ),
     ])
