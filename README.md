@@ -3,6 +3,16 @@
 ## NOTE TO SELF:
 Push from local main to remote branch (NOT MAIN!!): <code>git push -u shared main:jl-visual-algo</code>
 
+To start webots simulation with ROS, build the package, and do:
+
+<code>ros2 launch snake_robot snake_robot.launch.py</code>
+
+Code to source and build
+<code>
+colcon build --symlink-install
+source install/setup.bash
+</code>
+
 ## Salamnder robot
 https://cyberbotics.com/doc/guide/salamander
 
@@ -54,13 +64,3 @@ To:
 </code>
 
 This can get tricky later because we need to keep controllers/snake_basic/snake_basic.py up to date with snake_robot/snake_basic.py, and vice versa. There is currently no way to use the same piece of .py script for both pure webots and webots with ROS.
-
-To start webots simulation with ROS, build the package, and do:
-
-<code>ros2 launch snake_robot snake_robot.launch.py</code>
-
-Code to source and build
-<code>
-colcon build --symlink-install
-source install/setup.bash
-</code>
