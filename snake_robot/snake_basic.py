@@ -164,7 +164,8 @@ class SnakeRobotController:
             self.target_position[i] = self.restrict(self.target_position[i], self.min_motor_positions[i], self.max_motor_positions[i])
 
             # Debug
-            self.node.get_logger().info(f"final target pos = {self.target_position}")
+            # self.node.get_logger().info(f"final target pos = {self.target_position}")
+            self.node.get_logger().info("test")
 
             # Finally, set motor position
             # motors[i].setVelocity(target_position[i])
