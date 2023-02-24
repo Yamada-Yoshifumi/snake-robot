@@ -16,7 +16,7 @@ static int id = -1;    /* this module's ID */
 static WbDeviceTag motor, rear_connector, front_connector;
 
 /* oscillation parameters */
-static const double A = pi / 6.0; /* amplitude */
+static const double A = 0.7; /* amplitude */
 static const double T = 1.0; /* time period of oscillation */
 static const double F = 2.0 * pi / T; /* frequency */
 
@@ -25,7 +25,7 @@ static void forward() {
   //double phase = 2.0 * M_PI * F * t;
   
   double angle_p = A*sin(F*t + (2*pi/3)*(id-1)/2);
-  double angle_y = A*sin(F*t);
+  double angle_y = 0; //A*sin(F*t);
 
   if (id == 1 || id == 3 || id ==5) {
     wb_motor_set_position(motor, angle_p);
@@ -38,7 +38,7 @@ static void forward() {
 
 static void backward() {
   double angle_p = A*sin(F*t + (-2*pi/3)*(id-1)/2);
-  double angle_y = A*sin(F*t);
+  double angle_y = 0; //A*sin(F*t);
 
   if (id == 1 || id == 3 || id ==5) {
     wb_motor_set_position(motor, angle_p);
@@ -51,7 +51,7 @@ static void backward() {
 
 static void turn_left() {
   double angle_p = A*sin(F*t + (2*pi/3)*(id-1)/2);
-  double angle_y = A*sin(F*t) - pi/5;
+  double angle_y = -pi/9;
 
   printf("Turn left");
   if (id == 1 || id == 3 || id ==5) {
@@ -65,7 +65,7 @@ static void turn_left() {
 
 static void turn_right() {
   double angle_p = A*sin(F*t + (2*pi/3)*(id-1)/2);
-  double angle_y = A*sin(F*t) + pi/5;
+  double angle_y = pi/9;
 
   printf("Turn right");
   if (id == 1 || id == 3 || id ==5) {
@@ -105,34 +105,6 @@ static void rotate_acw() {
   }
 }
 
-static void sidewinding_left() {
-  double angle_p = A*sin(F*t + (-2*pi/3)*(id-1)/2);
-  double angle_y = A*sin(F*t + (-pi/3)*(id-2)/2 - pi/9);
-
-  printf("Sidewinding left");
-  if (id == 1 || id == 3 || id ==5) {
-    wb_motor_set_position(motor, angle_p);
-  } else if (id == 2 || id == 4) {
-    wb_motor_set_position(motor, angle_y);
-  } else {
-    //do_nothing();
-  }
-}
-
-static void sidewinding_right() {
-  double angle_p = A*sin(F*t + (2*pi/3)*(id-1)/2);
-  double angle_y = A*sin(F*t + (pi/3)*(id-2)/2 + pi/9);
-
-  printf("Sidewinding right");
-  if (id == 1 || id == 3 || id ==5) {
-    wb_motor_set_position(motor, angle_p);
-  } else if (id == 2 || id == 4) {
-    wb_motor_set_position(motor, angle_y);
-  } else {
-    //do_nothing();
-  }
-}
-
 static void disconnect_all() {
   static int done = 0;
 
@@ -156,8 +128,7 @@ struct {
   void (*func)();
   float duration;
 } states[] = {{forward, 10}, {backward, 10}, {do_nothing, 2}, {turn_left, 10}, {turn_right, 10},
-              {do_nothing, 1}, {rotate_cw, 10}, {rotate_acw, 10}, {do_nothing, 1}, {sidewinding_left, 10},
-              {sidewinding_right, 10}, {do_nothing, 10}, {NULL, 1}};
+              {do_nothing, 1}, {rotate_cw, 10}, {rotate_acw, 10}, {do_nothing, 10}, {disconnect_all, 1}, {NULL, 1}};
 
 static int state = 0;
 static float deadline;
