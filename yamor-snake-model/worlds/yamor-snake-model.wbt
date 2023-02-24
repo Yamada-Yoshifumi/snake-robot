@@ -33,7 +33,7 @@ TexturedBackgroundLight {
 Floor {
   size 100 100
 }
-DEF MODULE_1 yamor-snake-model {
+DEF MODULE_1 yamor-head {
   translation 0 0 0.03
   rotation 1 0 0 0
   name "module_1"
@@ -41,7 +41,7 @@ DEF MODULE_1 yamor-snake-model {
 }
 DEF MODULE_2 yamor-snake-model {
   translation -0.097 0 0.03
-  rotation 1 0 0 1.5708
+  rotation 1 0 0 -1.5708
   name "module_2"
   controller "yamor-snake-model"
 }
@@ -53,7 +53,7 @@ DEF MODULE_3 yamor-snake-model {
 }
 DEF MODULE_4 yamor-snake-model {
   translation -0.291 0 0.03
-  rotation 1 0 0 1.5708
+  rotation 1 0 0 -1.5708
   name "module_4"
   controller "yamor-snake-model"
 }
@@ -63,21 +63,9 @@ DEF MODULE_5 yamor-snake-model {
   name "module_5"
   controller "yamor-snake-model"
 }
-DEF MODULE_6 yamor-snake-model {
+DEF MODULE_6 yamor-tail {
   translation -0.485 0 0.03
-  rotation 1 0 0 1.5708
+  rotation 1 0 0 -1.5708
   name "module_6"
   controller "yamor-snake-model"
 }
-#DEF MODULE_7 yamor-snake-model {
-#  translation -0.582 0 0.03
-#  rotation 1 0 0 0
-#  name "module_7"
-#  controller "yamor-snake-model"
-#}
-#DEF MODULE_8 yamor-snake-model {
-#  translation -0.679 0 0.03
-#  rotation 1 0 0 1.5708
-#  name "module_8"
-#  controller "yamor-snake-model"
-#}
