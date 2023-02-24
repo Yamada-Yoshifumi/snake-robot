@@ -1,5 +1,8 @@
 # Documentation:
 
+## NOTE TO SELF:
+Push from local main to remote branch (NOT MAIN!!): <code>git push -u shared main:jl-visual-algo</code>
+
 ## Salamnder robot
 https://cyberbotics.com/doc/guide/salamander
 
