@@ -90,8 +90,8 @@ class PathAnalyser(Node):
     def listener_callback(self, msg):
         #self.get_logger().info('I heard: "%s"' % msg.point)
         path_point = [msg.point.x, msg.point.y]
-        #if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 0.3**2:
-        if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 10**2:
+        if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 0.3**2:
+        #if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 10**2:
             self.goal_reached_callback()
         
         if not self.init_pos_known:
@@ -104,10 +104,12 @@ class PathAnalyser(Node):
         else:
             self.hl.set_xdata(np.append(self.hl.get_xdata(), path_point[0]))
             self.hl.set_ydata(np.append(self.hl.get_ydata(), path_point[1]))
+            self.path_points.append(path_point)
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
     
     def construct_world_map(self):
+        from PIL import Image
         with open(self.world_file, 'r') as reader:
             line = reader.readline()
             current_object = {}
@@ -138,11 +140,17 @@ class PathAnalyser(Node):
                     while '' in split_line:
                         split_line.remove('')
                     current_object["size"] = [float(split_line[1]), float(split_line[2])]
+        #self.get_logger().info(f"ones: {len(np.where(np.array(self.world_map)==1)[0])}")
+        #Image.fromarray(np.array(self.world_map)*1000).save("map.png")
     
     def add_object(self, current_object):
         if current_object["name"] == "PlasticCrate":
-            self.world_map[int((current_object["translation"][0] - current_object["size"][0]/2 - 0.2 + 2.0)/MAP_PRECISION):int((current_object["translation"][0] + current_object["size"][0]/2 + 0.2+ 2.0)/MAP_PRECISION)][int((current_object["translation"][1] - current_object["size"][1]/2 - 0.2+ 2.0)/MAP_PRECISION):int((current_object["translation"][1] + current_object["size"][1]/2 + 0.2+ 2.0)/MAP_PRECISION)] = 1
-            self.world_map[int((current_object["translation"][0] - current_object["size"][0]/2 + 2.0)/MAP_PRECISION):int((current_object["translation"][0] + current_object["size"][0]/2+ 2.0)/MAP_PRECISION)][int((current_object["translation"][1] - current_object["size"][1]/2 + 2.0)/MAP_PRECISION):int((current_object["translation"][1] + current_object["size"][1]/2 + 2.0)/MAP_PRECISION)] = 2
+            for i in range(int((current_object["translation"][0] - current_object["size"][0]/2 - 0.2 + 2.0)/MAP_PRECISION)-1, int((current_object["translation"][0] + current_object["size"][0]/2 + 0.2+ 2.0)/MAP_PRECISION)-1):
+                for j in range(int((current_object["translation"][1] - current_object["size"][1]/2 - 0.2+ 2.0)/MAP_PRECISION)-1, int((current_object["translation"][1] + current_object["size"][1]/2 + 0.2+ 2.0)/MAP_PRECISION)-1):
+                    if i> 0 and i < 400 and j > 0 and j < 400:
+                        self.world_map[i][j] = 1
+            #self.world_map[int((current_object["translation"][0] - current_object["size"][0]/2 - 0.2 + 2.0)/MAP_PRECISION):int((current_object["translation"][0] + current_object["size"][0]/2 + 0.2+ 2.0)/MAP_PRECISION)][int((current_object["translation"][1] - current_object["size"][1]/2 - 0.2+ 2.0)/MAP_PRECISION):int((current_object["translation"][1] + current_object["size"][1]/2 + 0.2+ 2.0)/MAP_PRECISION)] = 1
+            #self.world_map[int((current_object["translation"][0] - current_object["size"][0]/2 + 2.0)/MAP_PRECISION):int((current_object["translation"][0] + current_object["size"][0]/2+ 2.0)/MAP_PRECISION)][int((current_object["translation"][1] - current_object["size"][1]/2 + 2.0)/MAP_PRECISION):int((current_object["translation"][1] + current_object["size"][1]/2 + 2.0)/MAP_PRECISION)] = 2
             plt.plot([(current_object["translation"][0] - current_object["size"][0]/2), (current_object["translation"][0] + current_object["size"][0]/2)], [(current_object["translation"][1] - current_object["size"][1]/2), (current_object["translation"][1] - current_object["size"][1]/2)], 'k')
             plt.plot([(current_object["translation"][0] - current_object["size"][0]/2), (current_object["translation"][0] + current_object["size"][0]/2)], [(current_object["translation"][1] + current_object["size"][1]/2), (current_object["translation"][1] + current_object["size"][1]/2)], 'k')
             plt.plot([(current_object["translation"][0] - current_object["size"][0]/2), (current_object["translation"][0] - current_object["size"][0]/2)], [(current_object["translation"][1] - current_object["size"][1]/2), (current_object["translation"][1] + current_object["size"][1]/2)], 'k')
@@ -191,18 +199,30 @@ class PathAnalyser(Node):
             plt.scatter(final_node.position[0], final_node.position[1], s=10, marker='o', color='k')
             # Draw final path.
             v = final_node
+            total_length = 0
             while v.parent is not None:
                 plt.plot([v.parent.pose[0], v.pose[0]], [v.parent.pose[1], v.pose[1]], color='blue')
-                self.get_logger().info("ploting")
                 self.fig.canvas.draw()
                 self.fig.canvas.flush_events()
                 self.optimal_path.insert(0, v.pose)
                 v = v.parent
-
-        self.benchmark_result =  np.array((np.array(self.path_points)-np.array(self.optimal_path))**2).mean()
-        plt.text(0.,0.,f"MSE = {str(self.benchmark_result)}")
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+                if len(self.optimal_path) > 1:
+                    total_length += np.sqrt((self.optimal_path[0][0] - self.optimal_path[1][0])**2 + (self.optimal_path[0][1] - self.optimal_path[1][1])**2)
+        
+            way_points_count = len(self.path_points)
+            expanded_optimal_path = []
+            for i,node_pos in enumerate(self.optimal_path[0:-1]):
+                segment_length = np.sqrt((self.optimal_path[i][0] - self.optimal_path[i+1][0])**2 + (self.optimal_path[i][1] - self.optimal_path[i+1][1])**2)
+                segment_way_points_count = int(way_points_count*segment_length/total_length)
+                for x_s, y_s in zip(np.linspace(self.optimal_path[i][0], self.optimal_path[i+1][0], segment_way_points_count), np.linspace(self.optimal_path[i][1], self.optimal_path[i+1][1], segment_way_points_count)):
+                    if len(expanded_optimal_path) < way_points_count:
+                        expanded_optimal_path.append([x_s, y_s])
+            while len(expanded_optimal_path) < way_points_count:
+                expanded_optimal_path.append(expanded_optimal_path[-1])
+            self.benchmark_result =  np.array((np.array(self.path_points)-np.array(expanded_optimal_path))**2).mean()
+            plt.text(2.,2.,f"MSE = {str(self.benchmark_result)}")
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
 
     def rrt(self):
         # RRT builds a graph one node at a time.
@@ -258,14 +278,13 @@ class PathAnalyser(Node):
 
         x_list = np.linspace(node._pose[0], final_position[0], 100)
         y_list = np.linspace(node._pose[1], final_position[1], 100)
-
+        cost = 1
         for coord in zip(x_list, y_list):
 
             if self.world_map[int((coord[0]+2)/MAP_PRECISION) - 1, int((coord[1]+2)/MAP_PRECISION) - 1] != 0:
                 return None, cost
             else:
                 continue
-        cost = 1
         return MapNode(final_position), cost
 
 def main(args=None):
