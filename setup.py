@@ -4,7 +4,7 @@ package_name = 'snake_robot'
 data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
 data_files.append(('share/' + package_name + '/launch', ['launch/snake_robot.launch.py']))
-data_files.append(('share/' + package_name + '/worlds', ['worlds/snake_basic.wbt']))
+data_files.append(('share/' + package_name + '/worlds', ['worlds/snake_basic.wbt', 'worlds/snake_basic_crates_and_barrels_1.wbt']))
 data_files.append(('share/' + package_name, ['package.xml']))
 data_files.append(('share/' + package_name + '/controllers/snake_basic', ['controllers/snake_basic/controller.py', 'controllers/snake_basic/snake_basic.py']))
 data_files.append(('share/' + package_name + '/libraries', ['libraries/controller.py', 'libraries/vehicle.py']))
