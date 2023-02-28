@@ -24,6 +24,12 @@ NUM_MOTORS = 10
 # Get Names of motors as per webots
 MOTOR_NAMES = ["motor_1", "motor_2",     "motor_3",     "motor_4",     "motor_5",
                 "motor_6", "motor_leg_1", "motor_leg_2", "motor_leg_3", "motor_leg_4"]
+
+## image capture rate of camera in ms
+# Write "default" to use default rate of 32 ms, but here we use slower rates as per paper
+CAMERA_RATE = 500   # paper used 2500ms
+# CAMERA_RATE = 'default'   
+
 #********* HELPER FUNCTIONS *********#
 """
 Put helper functions here. E.g., Gait equation, path selection, and obstacle avoidance
@@ -31,12 +37,14 @@ Put helper functions here. E.g., Gait equation, path selection, and obstacle avo
 class SnakeRobotController:
     def init(self, webots_node, properties):
         self.robot = webots_node.robot
+
         # get the time step of the current world.
         self.timestep = int(self.robot.getBasicTimeStep())       # in milliseconds
+
         rclpy.init(args=None)
         self.node = rclpy.create_node('snake_basic')
         self.pub = self.node.create_publisher( Float32MultiArray, 'motor', 10)
-        self.node.get_logger().info(f"simulation timestep = {self.timestep} ms")
+        self.node.get_logger().info(f"simulation timestep = {self.timestep} ms")    # DEBUG
 
         #********* INITIALISATION *********#
 
@@ -59,13 +67,20 @@ class SnakeRobotController:
         """
         Command to start camera and get image data from it
         """
-        ## image capture rate of camera
-        CAMERA_RATE = self.timestep      # this is default timestep (32 ms), so camera will refresh at 31.25Hz
-        # CAMERA_RATE = 2500          # this is the slower setting as per pape;, one image per 2.5s (0.4 Hz)
-        self.node.get_logger().info(f"camera takes one pic every {CAMERA_RATE} ms")
+        
         # Start camera
         self.camera = self.robot.getDevice('camera')
-        self.camera.enable(CAMERA_RATE)
+
+        # Select camera refresh rate
+        if isinstance(CAMERA_RATE, int):
+            cam_rate = CAMERA_RATE
+        else:
+            self.node.get_logger().info("No custom refresh rate specified, reverting to default value.")
+            cam_rate = self.timestep # this is default timestep (32 ms), so camera will refresh at 31.25Hz
+
+        self.node.get_logger().info(f"camera takes one pic every {cam_rate} ms")
+
+        self.camera.enable(cam_rate)
         self.img_width = self.camera.getWidth()
         self.img_height = self.camera.getHeight()
         self.node.get_logger().info(f"dims of img: w={self.img_width}, h={self.img_height}")
@@ -244,7 +259,8 @@ class SnakeRobotController:
             self.target_position[i] = self.restrict(self.target_position[i], self.min_motor_positions[i], self.max_motor_positions[i])
 
             # Debug
-            self.node.get_logger().info(f"final target pos = {self.target_position}")
+            # self.node.get_logger().info(f"final target pos = {self.target_position}")
+            # self.node.get_logger().info("test")
 
             # Finally, set motor position
             # motors[i].setVelocity(target_position[i])
