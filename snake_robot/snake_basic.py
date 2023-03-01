@@ -27,7 +27,7 @@ MOTOR_NAMES = ["motor_1", "motor_2",     "motor_3",     "motor_4",     "motor_5"
 
 ## image capture rate of camera in ms
 # Write "default" to use default rate of 32 ms, but here we use slower rates as per paper
-CAMERA_RATE = 500   # paper used 2500ms
+CAMERA_RATE = 32   # paper used 2500ms
 # CAMERA_RATE = 'default'   
 
 #********* HELPER FUNCTIONS *********#
@@ -46,6 +46,9 @@ class SnakeRobotController:
         self.pub = self.node.create_publisher( Float32MultiArray, 'motor', 10)
         self.node.get_logger().info(f"simulation timestep = {self.timestep} ms")    # DEBUG
 
+
+
+
         #********* INITIALISATION *********#
 
         # !!!!!!!! TURN SNAKE MODE ON OR OFF !!!!!!!! #
@@ -62,6 +65,10 @@ class SnakeRobotController:
 
         # Initialise list to store target motor positions
         self.target_position = np.zeros(NUM_MOTORS)
+
+        # Tracking elapsed time
+        self.time_elapsed = 0
+
 
         #********* START CAMERA *********#
         """
@@ -84,6 +91,11 @@ class SnakeRobotController:
         self.img_width = self.camera.getWidth()
         self.img_height = self.camera.getHeight()
         self.node.get_logger().info(f"dims of img: w={self.img_width}, h={self.img_height}")
+
+
+
+
+
         #********* START MOTORS *********#
         """
         Commands to start motors and initialise their initial positions and velocity
@@ -111,6 +123,11 @@ class SnakeRobotController:
         else:   # clamps value to limit
             return max(min_pos, min(max_pos, target_pos))
 
+
+
+
+
+    #********* HELPER FUNCTIONS *********#
 
     def get_image(self):
         """
@@ -143,7 +160,9 @@ class SnakeRobotController:
         ## ***** 1. Read the sensors ***** ##
 
         # Get an image from the camera and convert to OpenCV format
-        img_cv = self.get_image()
+        self.img_cv = self.get_image()  # Note: using self here to make img_cv global
+
+
         ## ***** 2. Calculate output actuator commands here ***** ##
 
         # Make robot go straight. But if you want it to turn, then adjust accordingly
@@ -190,6 +209,9 @@ class SnakeRobotController:
         msg.data = set(self.target_position.flatten())
         self.pub.publish(msg)
         #rclpy.spin_once(self.node)
+
+        # Update elapsed time
+        self.time_elapsed += self.timestep
 
 '''
 def main(args):
