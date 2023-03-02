@@ -178,13 +178,17 @@ class SnakeRobotController:
         Sample 5 trajectories (for now only 1) that will be tested,
         return the end points (can be modified to return a whole trajectory).
         """
-        # Without a motion model, I cannot determine where the snake head will land
-        # For now, I will only return one specific point for moving straight forward
         mid_w = int(np.floor(w / 2))
-        h_forward = h - int(np.floor(h / 4))
+        mid_h = int(np.floor(h / 2)) + int(np.floor(h / 10))  # Add a tolerance because of head's vertical tilting
 
         candidate_points = []
-        candidate_points.append(np.array([h_forward, mid_w]))
+        # Straight forward
+        candidate_points.append(np.array([mid_h, mid_w]))
+        # Left turn: spine_offset=-0.3
+        candidate_points.append(np.array([mid_h, 7]))  # Manually calculated
+        # Right turn: spine_offset=0.3
+        candidate_points.append(np.array([mid_h, w-7]))
+
         return candidate_points
 
 
@@ -197,6 +201,9 @@ class SnakeRobotController:
 
 
     def get_direction(self, img):
+        """
+        Given the input image, output the spine_offset control which steers the salamander.
+        """
         h, w, _ = img.shape
 
         # Get the ground segmentation mask
@@ -207,13 +214,22 @@ class SnakeRobotController:
 
         # Collision checking for the candidate points
         # It can be extended to check the whole trajectory, instead of just the end points
-        # Will be changed for multiple points
-        for point in candidate_points:
-            if self.collision_check(mask, point):
-                return 0.0
-            else:
-                # For now, either move straight forward, or turn right if obstacle detected
-                return 0.3
+        # Checking is done in order, and the highest-ordered collision-free path takes precedence:
+        # 1. Go straight forward
+        # 2. Turn left by setting spine_offset = -0.3
+        # 3. Turn left by setting spine_offset = 0.3
+        # 4. Turn left by setting spine_offset = -0.6
+        # The last (4th) case is for emergency collision avoidance. This causes the salamander to 
+        # take a sharp turn and its new location is out of the viewing frustrum at the old location,
+        # so no need to (or actually, we cannot) test for that case.
+        if self.collision_check(mask, candidate_points[0]):
+            return 0.0
+        elif self.collision_check(mask, candidate_points[1]):
+            return -0.3
+        elif self.collision_check(mask, candidate_points[2]):
+            return 0.3
+        else:
+            return -0.6
 
         # Should never reach here
         return 0.0
@@ -232,17 +248,21 @@ class SnakeRobotController:
             time = int(self.robot.getTime())
             cam_rate = int(1 / self.freq)    # This time in seconds!
             if time - self.previous_sample_time >= cam_rate:
+                # Debugging!
+                # img_RGB = cv2.cvtColor(img_cv, cv2.COLOR_HSV2RGB)
+                # cv2.imwrite("/home/kaicao/input_image.png", img_RGB)
+
                 self.previous_sample_time = time
                 # Get the direction using trajectory sampling and collision checking in perception space
-                # self.spine_offset = self.get_direction(img_cv)
-                self.spine_offset = -0.3  # Constant setting only used for testing image sampling!
+                self.spine_offset = self.get_direction(img_cv)
+                # self.spine_offset = -0.3  # Constant setting only used for testing image sampling!
                 self.node.get_logger().info(f"Setting spine offset: {self.spine_offset}")
                 
                 # NOTE: The following is only used for testing image sampling
                 # This requires to set the Robot as a Supervisor and set its DEF as "salamander" in the wbt file
-                salamander_robot = self.robot.getFromDef("salamander")
-                self.node.get_logger().info(f"Robot position: {salamander_robot.getPosition()}")
-                self.node.get_logger().info(f"Robot orientation: {salamander_robot.getOrientation()}")
+                # salamander_robot = self.robot.getFromDef("salamander")
+                # self.node.get_logger().info(f"Robot position: {salamander_robot.getPosition()}")
+                # self.node.get_logger().info(f"Robot orientation: {salamander_robot.getOrientation()}")
 
         # Increase phase according to elapsed time
         self.phase -= (self.timestep / 1000) * self.freq * 2 * np.pi
