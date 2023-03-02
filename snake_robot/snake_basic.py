@@ -40,6 +40,8 @@ class SnakeRobotController:
 
         # get the time step of the current world.
         self.timestep = int(self.robot.getBasicTimeStep())       # in milliseconds
+        # Record when the previous image was taken
+        self.previous_sample_time = int(self.robot.getTime())    # in seconds
 
         rclpy.init(args=None)
         self.node = rclpy.create_node('snake_basic')
@@ -58,7 +60,7 @@ class SnakeRobotController:
         self.amplitude = 1.0     # Gait eqn amplitude
         self.phase = 0.0         # current locomotion phase
         self.walk_ampl = 0.6     # Walk amplitude in rads (for body swaying)
-        self.freq = 1.4          # Gait freq in Hz   
+        self.freq = 1.0         # Gait freq in Hz   # Changed from 1.4 to 1 to make camera_rate an int
 
         # Initialise list to store target motor positions
         self.target_position = np.zeros(NUM_MOTORS)
@@ -72,11 +74,12 @@ class SnakeRobotController:
         self.camera = self.robot.getDevice('camera')
 
         # Select camera refresh rate
-        if isinstance(CAMERA_RATE, int):
-            cam_rate = CAMERA_RATE
-        else:
-            self.node.get_logger().info("No custom refresh rate specified, reverting to default value.")
-            cam_rate = self.timestep # this is default timestep (32 ms), so camera will refresh at 31.25Hz
+        cam_rate = int(1000 / self.freq)    # in miliseconds
+        # if isinstance(CAMERA_RATE, int):
+        #     cam_rate = CAMERA_RATE
+        # else:
+        #     self.node.get_logger().info("No custom refresh rate specified, reverting to default value.")
+        #     cam_rate = self.timestep # this is default timestep (32 ms), so camera will refresh at 31.25Hz
 
         self.node.get_logger().info(f"camera takes one pic every {cam_rate} ms")
 
@@ -225,9 +228,21 @@ class SnakeRobotController:
         ## ***** 2. Calculate output actuator commands here ***** ##
 
         # (outdated)Make robot go straight. But if you want it to turn, then adjust accordingly
-        # Get the direction using trajectory sampling and collision checking in perception space
-        spine_offset = self.get_direction(img_cv)
-        print(spine_offset)
+        if img_cv is not None:
+            time = int(self.robot.getTime())
+            cam_rate = int(1 / self.freq)    # This time in seconds!
+            if time - self.previous_sample_time >= cam_rate:
+                self.previous_sample_time = time
+                # Get the direction using trajectory sampling and collision checking in perception space
+                # self.spine_offset = self.get_direction(img_cv)
+                self.spine_offset = -0.3  # Constant setting only used for testing image sampling!
+                self.node.get_logger().info(f"Setting spine offset: {self.spine_offset}")
+                
+                # NOTE: The following is only used for testing image sampling
+                # This requires to set the Robot as a Supervisor and set its DEF as "salamander" in the wbt file
+                salamander_robot = self.robot.getFromDef("salamander")
+                self.node.get_logger().info(f"Robot position: {salamander_robot.getPosition()}")
+                self.node.get_logger().info(f"Robot orientation: {salamander_robot.getOrientation()}")
 
         # Increase phase according to elapsed time
         self.phase -= (self.timestep / 1000) * self.freq * 2 * np.pi
@@ -237,7 +252,7 @@ class SnakeRobotController:
 
         # Calculate motor positions for body swaying
         for i in range(6):  # up to 6 because motors 0-5 for body. 6-9 for leg
-            self.target_position[i] = self.walk_ampl * self.amplitude * A[i] * np.sin(self.phase) + spine_offset
+            self.target_position[i] = self.walk_ampl * self.amplitude * A[i] * np.sin(self.phase) + self.spine_offset
             # The above is a sample eqn for body wave. Replace it with gait eqn as needed!!!
 
 
