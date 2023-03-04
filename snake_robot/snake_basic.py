@@ -162,11 +162,11 @@ class SnakeRobotController:
         # cv2.imshow("Ground reference image", img_RGB)
         # cv2.waitKey(0)
         # print(ground_ref_img)
-        tol = 10
-        low_H, low_S, low_V = np.min(ground_ref_img, axis=(0,1)) - tol
-        high_H, high_S, high_V = np.max(ground_ref_img, axis=(0,1)) + tol
-        # print(low_H, low_S, low_V, high_H, high_S, high_V)
-        mask = cv2.inRange(img, np.array([low_H, low_S, low_V]), np.array([high_H, high_S, high_V]))
+        tol = np.array([10, 30, 0])
+        low_H, low_S, _ = np.min(ground_ref_img, axis=(0,1)) - tol
+        high_H, high_S, _ = np.max(ground_ref_img, axis=(0,1)) + tol
+        # self.node.get_logger().info(f"{low_H}, {low_S}, {20}, {high_H}, {high_S}, {255}")
+        mask = cv2.inRange(img, np.array([low_H, low_S, 20]), np.array([high_H, high_S, 255]))
         # cv2.namedWindow("Mask")
         # cv2.imshow("Mask", mask)
         # cv2.waitKey(0)
@@ -179,7 +179,7 @@ class SnakeRobotController:
         return the end points (can be modified to return a whole trajectory).
         """
         mid_w = int(np.floor(w / 2))
-        mid_h = int(np.floor(h / 2)) + int(np.floor(h / 10))  # Add a tolerance because of head's vertical tilting
+        mid_h = int(np.floor(h / 2)) + int(np.floor(h / 20))  # Add a tolerance because of head's vertical tilting
 
         candidate_points = []
         # Straight forward
@@ -187,17 +187,36 @@ class SnakeRobotController:
         # Left turn: spine_offset=-0.3
         candidate_points.append(np.array([mid_h, 7]))  # Manually calculated
         # Right turn: spine_offset=0.3
-        candidate_points.append(np.array([mid_h, w-7]))
+        candidate_points.append(np.array([mid_h, w-7-1]))  # To account for array index
 
+        # Debugging!
+        # self.node.get_logger().info(f"Candidate points: {candidate_points}")
         return candidate_points
 
 
-    def collision_check(self, mask, point):
+    def collision_check(self, mask, point, h, w):
         """
         Check whether the end point of a trajectory will collide with an obstacle,
         using the ground segmentation mask.
+        Check a 3x3 patch around the point.
+        Return true if no collision detected, and false otherwise.
         """
-        return mask[point[0], point[1]]
+        row = point[0]
+        column = point[1]
+
+        # If not enough space around the point, just check the single point.
+        # This shall not happen for the default setting (120x80 image), so a simple solution is chosen.
+        # A better solution would be to do extrapolation at borders, for example.
+        if row - 1 < 0 or row + 1 >= h or column - 1 < 0 or column + 1 >= w:
+            return mask[row, column]
+        
+        # Otherwise, each pixel in the 3x3 patch casts a vote.
+        score = np.sum(mask[row-1:row+2, column-1:column+2]) / 255 / 9
+        # Debugging!
+        # self.node.get_logger().info(f"Patch: {mask[row-1:row+2, column-1:column+2]}")
+        # self.node.get_logger().info(f"Score: {score}")
+        # Trajectory is deemed collision-free if at least 60% of the pixels are ground pixels
+        return score > 0.6
 
 
     def get_direction(self, img):
@@ -222,11 +241,11 @@ class SnakeRobotController:
         # The last (4th) case is for emergency collision avoidance. This causes the salamander to 
         # take a sharp turn and its new location is out of the viewing frustrum at the old location,
         # so no need to (or actually, we cannot) test for that case.
-        if self.collision_check(mask, candidate_points[0]):
+        if self.collision_check(mask, candidate_points[0], h, w):
             return 0.0
-        elif self.collision_check(mask, candidate_points[1]):
+        elif self.collision_check(mask, candidate_points[1], h, w):
             return -0.3
-        elif self.collision_check(mask, candidate_points[2]):
+        elif self.collision_check(mask, candidate_points[2], h, w):
             return 0.3
         else:
             return -0.6
@@ -248,15 +267,18 @@ class SnakeRobotController:
             time = int(self.robot.getTime())
             cam_rate = int(1 / self.freq)    # This time in seconds!
             if time - self.previous_sample_time >= cam_rate:
-                # Debugging!
-                # img_RGB = cv2.cvtColor(img_cv, cv2.COLOR_HSV2RGB)
-                # cv2.imwrite("/home/kaicao/input_image.png", img_RGB)
 
                 self.previous_sample_time = time
                 # Get the direction using trajectory sampling and collision checking in perception space
                 self.spine_offset = self.get_direction(img_cv)
                 # self.spine_offset = -0.3  # Constant setting only used for testing image sampling!
                 self.node.get_logger().info(f"Setting spine offset: {self.spine_offset}")
+
+                # Save some images for illustration
+                # if self.spine_offset == -0.3:
+                #     img_RGB = cv2.cvtColor(img_cv, cv2.COLOR_HSV2RGB)
+                #     cv2.imwrite("/home/kaicao/left_turn.png", img_RGB)
+                #     self.node.get_logger().info(f"Image saved!")
                 
                 # NOTE: The following is only used for testing image sampling
                 # This requires to set the Robot as a Supervisor and set its DEF as "salamander" in the wbt file
