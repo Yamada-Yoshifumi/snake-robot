@@ -5,7 +5,7 @@ matplotlib.interactive(True)
 import matplotlib.pyplot as plt
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Float64
 from geometry_msgs.msg import PointStamped
 OBSTACLE_PIXEL = 2
 COLLISION_PIXEL = 1
@@ -55,15 +55,19 @@ class PathAnalyser(Node):
     
     def __init__(self):
         super().__init__("path_analyser")
-        self.subscription = self.create_subscription(
+        self.gps_subscription = self.create_subscription(
             PointStamped,
             'salamander/gps',
             self.listener_callback,
             10)
+        self.trajectory_mse_publisher = self.create_publisher(
+            Float64,
+            'mse_value',
+            10
+        )
         self.declare_parameter('world_file')
         self.world_file = str(self.get_parameter('world_file').value)
         self.world_map = np.zeros((int(4/MAP_PRECISION),int(4/MAP_PRECISION)), dtype=np.uint8)
-
         self.fig = plt.figure()
         self.start_point = [1.0, -1.0]
         self.goal = [-2.0, 2.0]
@@ -81,7 +85,7 @@ class PathAnalyser(Node):
         plt.show(block=False)
 
         self.construct_world_map()
-        self.subscription  # prevent unused variable warning
+        self.gps_subscription  # prevent unused variable warning
         self.path_points = []
         self.optimal_path = []
         self.init_pos_known = False
@@ -91,8 +95,13 @@ class PathAnalyser(Node):
         #self.get_logger().info('I heard: "%s"' % msg.point)
         path_point = [msg.point.x, msg.point.y]
         if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 0.3**2:
-        #if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 10**2:
+            self.goal = path_point
             self.goal_reached_callback()
+            self.fig.savefig("trajectory.png")
+            msg = Float64()
+            msg.data = self.benchmark_result
+            self.trajectory_mse_publisher.publish(msg)
+            raise SystemExit
         
         if not self.init_pos_known:
             self.init_pos_known = True
@@ -145,8 +154,8 @@ class PathAnalyser(Node):
     
     def add_object(self, current_object):
         if current_object["name"] == "PlasticCrate":
-            for i in range(int((current_object["translation"][0] - current_object["size"][0]/2 - 0.2 + 2.0)/MAP_PRECISION)-1, int((current_object["translation"][0] + current_object["size"][0]/2 + 0.2+ 2.0)/MAP_PRECISION)-1):
-                for j in range(int((current_object["translation"][1] - current_object["size"][1]/2 - 0.2+ 2.0)/MAP_PRECISION)-1, int((current_object["translation"][1] + current_object["size"][1]/2 + 0.2+ 2.0)/MAP_PRECISION)-1):
+            for i in range(int((current_object["translation"][0] - current_object["size"][0]/2 - 0.1 + 2.0)/MAP_PRECISION)-1, int((current_object["translation"][0] + current_object["size"][0]/2 + 0.1 + 2.0)/MAP_PRECISION)-1):
+                for j in range(int((current_object["translation"][1] - current_object["size"][1]/2  - 0.1 + 2.0)/MAP_PRECISION)-1, int((current_object["translation"][1] + current_object["size"][1]/2 + 0.1 + 2.0)/MAP_PRECISION)-1):
                     if i> 0 and i < 400 and j > 0 and j < 400:
                         self.world_map[i][j] = 1
             #self.world_map[int((current_object["translation"][0] - current_object["size"][0]/2 - 0.2 + 2.0)/MAP_PRECISION):int((current_object["translation"][0] + current_object["size"][0]/2 + 0.2+ 2.0)/MAP_PRECISION)][int((current_object["translation"][1] - current_object["size"][1]/2 - 0.2+ 2.0)/MAP_PRECISION):int((current_object["translation"][1] + current_object["size"][1]/2 + 0.2+ 2.0)/MAP_PRECISION)] = 1
@@ -159,11 +168,8 @@ class PathAnalyser(Node):
             radius = 0.4
             for i in range(int(-2/MAP_PRECISION), int(2/MAP_PRECISION)):
                 for j in range(int(-2/MAP_PRECISION), int(2/MAP_PRECISION)):
-                    if (i - current_object["translation"][0])**2 + (j - current_object["translation"][1])**2 < (radius+0.2)**2:
-                        if (i - current_object["translation"][0])**2 + (j - current_object["translation"][1])**2 < radius**2:
-                            self.world_map[i+int(2/MAP_PRECISION)][j+int(2/MAP_PRECISION)] = 2
-                        else:
-                            self.world_map[i+int(2/MAP_PRECISION)][j+int(2/MAP_PRECISION)] = 1
+                    if (i - current_object["translation"][0])**2 + (j - current_object["translation"][1])**2 < (radius + 0.1)**2:
+                        self.world_map[i+int(2/MAP_PRECISION)][j+int(2/MAP_PRECISION)] = 1
             a = np.linspace(0., 2 * np.pi, 20)
             x = np.cos(a) * .4 + current_object["translation"][0]
             y = np.sin(a) * .4 + current_object["translation"][1]
@@ -173,28 +179,6 @@ class PathAnalyser(Node):
 
     def goal_reached_callback(self):
         start_node, final_node = self.rrt()
-        '''
-        s = [(start_node, None)]  # (node, parent).
-        points = []
-        while s:
-            self.get_logger().info("ploting")
-            v, u = s.pop()
-            if hasattr(v, 'visited'):
-                continue
-            v.visited = True
-            # Draw path from u to v.
-            if u is not None:
-                plt.plot([u.pose[0], v.pose[0]], [u.pose[1], v.pose[1]], color='green')
-                self.fig.canvas.draw()
-                self.fig.canvas.flush_events()
-            points.append(v.pose)
-            for w in v.neighbors:
-                s.append((w, v))
-                
-
-        points = np.array(points)
-        plt.scatter(points[:, 0], points[:, 1], s=10, marker='o', color=(.8, .8, .8))
-        '''
         if final_node is not None:
             plt.scatter(final_node.position[0], final_node.position[1], s=10, marker='o', color='k')
             # Draw final path.
@@ -234,7 +218,7 @@ class PathAnalyser(Node):
             self.get_logger.info('Goal position is not in the free space.')
             return start_node, final_node
         graph.append(start_node)
-        for _ in range(1000): 
+        for _ in range(5000): 
             position = self.sample_random_position()
             # With a random chance, draw the goal position.
             if np.random.rand() < .05:
@@ -291,8 +275,10 @@ def main(args=None):
     rclpy.init(args=args)
 
     path_analyser = PathAnalyser()
-
-    rclpy.spin(path_analyser)
+    try:
+        rclpy.spin(path_analyser)
+    except SystemExit:                 # <--- process the exception 
+        rclpy.logging.get_logger("Quitting").info('Done')
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically

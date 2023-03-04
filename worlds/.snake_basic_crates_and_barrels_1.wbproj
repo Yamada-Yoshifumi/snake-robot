@@ -8,3 +8,4 @@ orthographicViewHeight: 1
 textFiles: -1
 consoles: Console:All:All
 renderingDevicePerspectives: Salamander:camera;1;1;0;0
+renderingDevicePerspectives: salamander:camera;1;1;0;0
