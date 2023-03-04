@@ -27,7 +27,7 @@ PlasticCrate {
   size 0.2 0.2 0.2
 }
 Salamander {
-  translation 0 0 0.04
+  translation 1.0 -1.0 0.04
   rotation 0 0 1 2.35619
   controller "<extern>"
   name "salamander"
