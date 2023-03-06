@@ -11,9 +11,10 @@ from webots_ros2_driver.webots_launcher import WebotsLauncher
 
 def generate_launch_description():
     package_dir = get_package_share_directory('snake_robot')
+    world_file = os.path.join(package_dir, 'worlds', 'snake_basic_crates_and_barrels_1.wbt')
     robot_description = pathlib.Path(os.path.join(package_dir, 'resource', 'salamander.urdf')).read_text()
     webots = WebotsLauncher(
-        world=os.path.join(package_dir, 'worlds', 'snake_basic.wbt'),
+        world=world_file,
     )
 
     my_robot_driver = Node(
@@ -31,6 +32,9 @@ def generate_launch_description():
         package='snake_robot',
         executable='trajectory_recording',
         output='screen',
+        parameters=[
+            {'world_file': world_file},
+        ],
     )
 
     return LaunchDescription([

@@ -7,8 +7,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.700856690270276 -0.012041210400107137 0.7132004689815444 3.160403556156247
-  position 1.5550328936840687 -0.030214541541762712 12.023740702824245
+  orientation -0.5679395284427237 0.11963528766393573 0.8143292270192838 2.794794253177139
+  position 2.7859450824467453 -0.8586738429821693 8.492481642596271
 }
 TexturedBackground {
 }
@@ -23,18 +23,23 @@ RectangleArena {
   wallHeight 0.5
 }
 PlasticCrate {
-  translation 0.2 0.06 0
+  translation -1.86 1.27 0
+  name "plastic crate(20)"
+  size 0.3 0.3 0.6
+}
+PlasticCrate {
+  translation 0.14 0.06 0
   name "plastic crate(5)"
   size 0.3 0.3 0.6
   color 1 0.639216 0.282353
 }
 PlasticCrate {
-  translation 0.2 0.36 0
+  translation 0.14 0.36 0
   name "plastic crate(6)"
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation 0.2 -0.25 0
+  translation 0.14 -0.25 0
   name "plastic crate(4)"
   size 0.3 0.3 0.6
 }
@@ -55,13 +60,13 @@ PlasticCrate {
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation 0.05 0.65 0
+  translation -0.01 0.65 0
   name "plastic crate(9)"
   size 0.3 0.3 0.6
   color 0.647059 0.113725 0.176471
 }
 PlasticCrate {
-  translation -0.18 0.93 0
+  translation -0.24 0.93 0
   name "plastic crate(10)"
   size 0.3 0.3 0.6
 }
@@ -77,7 +82,7 @@ PlasticCrate {
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation -0.44 1.24 0
+  translation -0.3 1.24 0
   name "plastic crate(13)"
   size 0.3 0.3 0.6
 }
@@ -92,33 +97,33 @@ PlasticCrate {
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation -0.75 1.27 0
+  translation -0.6 1.27 0
   name "plastic crate(16)"
   size 0.3 0.3 0.6
   color 0.803922 0.670588 0.560784
 }
 PlasticCrate {
-  translation -1.04 1.27 0
+  translation -0.91 1.27 0
   name "plastic crate(17)"
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation -1.36 1.27 0
+  translation -1.24 1.27 0
   name "plastic crate(18)"
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation -1.65 1.27 0
+  translation -1.54 1.27 0
   name "plastic crate(19)"
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation 0.2 -0.56 0
+  translation 0.13 -0.56 0
   name "plastic crate(2)"
   size 0.3 0.3 0.6
 }
 PlasticCrate {
-  translation 0.46 -0.89 0
+  translation 0.4 -0.87 0
   size 0.3 0.3 0.6
 }
 PlasticCrate {
@@ -127,10 +132,10 @@ PlasticCrate {
   size 0.3 0.3 0.6
 }
 Salamander {
-  translation 0.905089 -0.905093 0.04
+  translation 1 -1 0.04
   rotation 0 0 1 2.35619
-  controller "<extern>"
   name "salamander"
+  controller "<extern>"
   extensionSlot [
     Camera {
       fieldOfView 1.22
