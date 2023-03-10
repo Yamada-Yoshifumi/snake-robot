@@ -1,8 +1,14 @@
-"""snake_basic controller."""
+"""
+snake_basic controller with ROS2 
+
+Code written by ourselves unless otherwise credited.
+
+"""
 
 #********* IMPORTS *********#
 # Import basic py libs
 import cv2 as cv2   # opencv
+import os, datetime
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -25,17 +31,30 @@ NUM_MOTORS = 10
 MOTOR_NAMES = ["motor_1", "motor_2",     "motor_3",     "motor_4",     "motor_5",
                 "motor_6", "motor_leg_1", "motor_leg_2", "motor_leg_3", "motor_leg_4"]
 
-## image capture rate of camera in ms
+# IMAGE CAPTURE RATE FOR CAMERA
 # Write "default" to use default rate of 32 ms, but here we use slower rates as per paper
-CAMERA_RATE = 500   # paper used 2500ms
-# CAMERA_RATE = 'default'   
+CAMERA_RATE = 1*32   # paper used 2500ms
+# CAMERA_RATE = 'default'    
 
-#********* HELPER FUNCTIONS *********#
-"""
-Put helper functions here. E.g., Gait equation, path selection, and obstacle avoidance
-"""
+# FOR DEBLURRING
+# Define Point Spread Fn hyperparameters
+SIZE = 2
+SNR = 10
+ANGLE = 90
+
+
+# This class includes all key functions
+
 class SnakeRobotController:
+
+    
     def init(self, webots_node, properties):
+
+        #********* INITIALISATION *********#
+        """
+        Initialise (mostly) tuning and global variables for the class
+        """
+
         self.robot = webots_node.robot
 
         # get the time step of the current world.
@@ -48,45 +67,78 @@ class SnakeRobotController:
         self.pub = self.node.create_publisher( Float32MultiArray, 'motor', 10)
         self.node.get_logger().info(f"simulation timestep = {self.timestep} ms")    # DEBUG
 
-        #********* INITIALISATION *********#
 
-        # !!!!!!!! TURN SNAKE MODE ON OR OFF !!!!!!!! #
+        # Turn snake leg mode on or off
+        # Note: salamander doesn't work without legs due to lack of friction
         # True to keep legs, False to extend legs
         self.snake_mode = False   
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+
+        # Decide if to export images during simulation or not
+        self.export_imgs = False
+
+        # Track elapsed time
+        self.time_elapsed = 0
+
+        # Export images
+        # Create folder to export images to if selected
+        if self.export_imgs:
+            self.output_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'img_outputs')
+
+            # Create output folder
+            if not os.path.exists(self.output_dir):
+                os.mkdir(self.output_dir)
+
+            # Create folder for this run
+            self.output_dir_curr_run = os.path.join(self.output_dir, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+            os.mkdir(self.output_dir_curr_run)
+
+        # Create list to store blurriness value of images
+        self.blur_list_org = []
+        self.blur_list_deblur = []
 
         # Initial locomotion values
         self.spine_offset = 0.0  # this controls turning. negative vals to turn left, positive turns right
         self.amplitude = 1.0     # Gait eqn amplitude
         self.phase = 0.0         # current locomotion phase
         self.walk_ampl = 0.6     # Walk amplitude in rads (for body swaying)
-        self.freq = 1.0         # Gait freq in Hz   # Changed from 1.4 to 1 to make camera_rate an int
+        self.freq = 1/1        # Gait freq in Hz. Note: freq = 1/T. Originally =1
+        self.node.get_logger().info(f"Gait period = {1/self.freq} s and freq = {self.freq} Hz")
 
         # Initialise list to store target motor positions
         self.target_position = np.zeros(NUM_MOTORS)
 
+        
         #********* START CAMERA *********#
         """
         Command to start camera and get image data from it
         """
-        
+        ## NEW camera refresh rate code
+
         # Start camera
         self.camera = self.robot.getDevice('camera')
 
+        ## NEWER
         # Select camera refresh rate
-        cam_rate = int(1000 / self.freq)    # in miliseconds
-        # if isinstance(CAMERA_RATE, int):
-        #     cam_rate = CAMERA_RATE
-        # else:
-        #     self.node.get_logger().info("No custom refresh rate specified, reverting to default value.")
-        #     cam_rate = self.timestep # this is default timestep (32 ms), so camera will refresh at 31.25Hz
+        cam_rate = self.timestep # just keep it at default 32ms
 
-        self.node.get_logger().info(f"camera takes one pic every {cam_rate} ms")
+        # Compute number of cycles before camera refreshes
+        if isinstance(CAMERA_RATE, int):
+            # Camera will refresh at number of cycles closest to requested rate
+            closest_rate = np.floor(cam_rate * np.floor( CAMERA_RATE / cam_rate ))
+            self.cam_cycle = int(closest_rate / cam_rate)
+        else:
+            self.cam_cycle = 1 # camera refreshes at every simulation step, the fastest possible
 
+        # image capture rate of camera
+        self.node.get_logger().info(f"camera takes one pic every {self.cam_cycle * cam_rate} ms")
+
+        # Dimensions
         self.camera.enable(cam_rate)
-        self.img_width = self.camera.getWidth()
-        self.img_height = self.camera.getHeight()
-        self.node.get_logger().info(f"dims of img: w={self.img_width}, h={self.img_height}")
+        img_width = self.camera.getWidth()
+        img_height = self.camera.getHeight()
+        self.node.get_logger().info(f"dims of img: w={img_width}, h={img_height}")
+
+
         #********* START MOTORS *********#
         """
         Commands to start motors and initialise their initial positions and velocity
@@ -105,20 +157,12 @@ class SnakeRobotController:
             self.motors[i].setPosition(0)
             # motors[i].setVelocity(float('inf'))
 
-    def restrict(self, target_pos, min_pos, max_pos):
-        """
-        Clamps motor position to within min/max values 
-        """
-        if (min_pos == 0 and max_pos == 0):     # weird case, just remain unchanged
-            return target_pos
-        else:   # clamps value to limit
-            return max(min_pos, min(max_pos, target_pos))
 
+    #********* DE-BLURRING FUNCTIONS *********#
 
     def get_image(self):
         """
         Gets image and convert into cv2 readable format
-
         Reference: https://github.com/lukicdarkoo/webots-example-visual-tracking
         """
         # Get image after 1 step
@@ -141,6 +185,174 @@ class SnakeRobotController:
 
         return img_cv
     
+
+    def export_img_and_calc_blur(self, img_cv, orginal_img):
+        """
+        Exports image and calculates its blurriness using variance of Laplacian
+            img_cv: OpenCV object in HSV format
+            orginal_img: boolean for file naming purposes
+        """
+        # Exports image if required
+        if self.export_imgs:
+            img_name = 'img' if orginal_img else 'img_deblur'
+            img_cv_export = cv2.cvtColor(img_cv, cv2.COLOR_HSV2RGB)
+            cv2.imwrite(os.path.join(self.output_dir_curr_run, f'{self.time_elapsed}_{img_name}.jpg'), img_cv_export)
+
+        # Calculates blurriness
+        # First computes the Laplacian (2nd derivative), then return variance
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_HSV2BGR)
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+
+        var_Laplc = cv2.Laplacian(img_cv, cv2.CV_64F).var()
+
+        return var_Laplc
+
+    # For image deblurring
+    def blur_edge(self, img, d=31):
+        """
+        Takes in an image and blurs the edges. An optional step in deblur pipeline
+        Code adapted from: https://github.com/npinto/opencv/blob/master/samples/python2/deconvolution.py
+        """
+        h, w  = img.shape[:2]
+        img_pad = cv2.copyMakeBorder(img, d, d, d, d, cv2.BORDER_WRAP)
+        img_blur = cv2.GaussianBlur(img_pad, (2*d+1, 2*d+1), -1)[d:-d,d:-d]
+        y, x = np.indices((h, w))
+        dist = np.dstack([x, w-x-1, y, h-y-1]).min(-1)
+        w = np.minimum(np.float32(dist)/d, 1.0)
+        return img*w + img_blur*(1-w)
+
+
+    # For image deblurring
+    def motion_kernel(self, angle, d, sz=65):
+        """
+        Creates a motion kernel based on Point Spread Fn.
+        Code adapted from: https://github.com/npinto/opencv/blob/master/samples/python2/deconvolution.py
+        """
+        kern = np.ones((1, d), np.float32)
+        c, s = np.cos(angle), np.sin(angle)
+        A = np.float32([[c, -s, 0], [s, c, 0]])
+        sz2 = sz // 2
+        A[:,2] = (sz2, sz2) - np.dot(A[:,:2], ((d-1)*0.5, 0))
+        kern = cv2.warpAffine(kern, A, (sz, sz), flags=cv2.INTER_CUBIC)
+        return kern
+
+    # For image deblurring
+    def deblur(self, img, angle, size, snr):
+        """
+        Img deblurring pipeline. Returns deblurred img
+        Code adapted from: https://github.com/npinto/opencv/blob/master/samples/python2/deconvolution.py
+        """
+        # Blur edge and DFT
+        img = np.float32(img)/255.0
+        # img = blur_edge(img)
+        IMG = cv2.dft(img, flags=cv2.DFT_COMPLEX_OUTPUT)
+
+        # Define PSF
+        ang = np.deg2rad(angle)  # Angle of PSF, range 0-180, def 135
+        d = size                 # size, range 0-50, def 22
+        noise = 10**(-0.1* snr )  # SNR, range 0-50, def 25
+
+        # Define Motion kernel
+        psf = self.motion_kernel(ang, d)
+        # plt.imshow(psf)
+
+        psf /= psf.sum()
+        psf_pad = np.zeros_like(img)
+        kh, kw = psf.shape
+        psf_pad[:kh, :kw] = psf
+        PSF = cv2.dft(psf_pad, flags=cv2.DFT_COMPLEX_OUTPUT, nonzeroRows = kh)
+        PSF2 = (PSF**2).sum(-1)
+        iPSF = PSF / (PSF2 + noise)[...,np.newaxis]
+        RES = cv2.mulSpectrums(IMG, iPSF, 0)
+        res = cv2.idft(RES, flags=cv2.DFT_SCALE | cv2.DFT_REAL_OUTPUT )
+        res = np.roll(res, -kh//2, 0)
+        res = np.roll(res, -kw//2, 1)
+
+        return (res*255).astype(np.uint8)
+    
+
+    def split_deblur_merge(self, img):
+        """
+        Splits image up into BGR, runs deblur on each channel, 
+        then merges it back as deblurred 3 channel img. 
+        
+        It is necessary to split images as this filter implementation
+        only works on a single channel at once. Experimentally,
+        splitting images up and merging yields similar performance
+        to that of a single-channel grayscale image.
+        """
+
+        # convert HSV to BGR
+        img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+
+        # Split img into channels
+        img_b,img_g,img_r = cv2.split(img)
+
+        # Define Point Spread Fn parameters
+        size = SIZE
+        snr = SNR
+        angle = ANGLE
+
+        # Angle determind using horizon tilt
+        try:
+            angle = self.calc_horizon_angle(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+            print(f"Horizon angle = {angle}")   # debug
+        except: 
+            angle = 0
+        angle += 90
+
+        # Run deblur on each channel
+        img_out = []
+        for channel in [img_b,img_g,img_r]:
+            res = self.deblur(channel, angle, size, snr)
+            img_out.append(res)
+
+        # Merge channels back
+        img_merged = cv2.merge(img_out)
+
+        # Run a median filter to remove weird coloured pixels
+        # img_merged = cv2.medianBlur(img_merged, 1)
+        # img_merged = cv2.fastNlMeansDenoisingColored(img_merged)
+
+        # Increase brightness
+        delta_contrast=1.0
+        delta_brightness=8
+        img_merged = cv2.convertScaleAbs(img_merged, alpha=delta_contrast, beta=delta_brightness)
+        
+        # Convert back to HSV
+        img_merged = cv2.cvtColor(img_merged, cv2.COLOR_BGR2HSV)
+
+        return img_merged
+    
+
+    # Horizon detection function
+    def calc_horizon_angle(image_grayscale):
+        """
+        Takes in grayscale image and gives horizon tilt in degrees
+        """
+        edges = cv2.Canny(image_grayscale,100,300)  # 100, 300 are arbitarily determined
+
+        # Find max value in each column
+        horz_xcoords = np.amax(edges, 0)
+
+        # Find max and min x-coordinates
+        horz_xcoords_pos = np.where(horz_xcoords==255)[0]
+        min_x = np.amin(horz_xcoords_pos)
+        max_x = np.amax(horz_xcoords_pos)
+
+        # Find y_coords of horiz
+        min_y = np.where(edges[:,min_x]==255)[0][0]
+        max_y = np.where(edges[:,max_x]==255)[0][0]
+
+        # Calc angle in rads
+        horz_angle = np.arctan((max_y-min_y)/(max_x-min_x))
+
+        return np.rad2deg(horz_angle)   # convert to deg
+
+
+
+    #********* NAVIGATION FUNCTIONS  *********#  
+
     def segmentation(self, img):
         """
         Segement the image into ground pixels and non-ground pixels.
@@ -340,12 +552,65 @@ class SnakeRobotController:
         # Should never reach here
         return 0.0
 
+
+    #********* HELPER FUNCTIONS *********#
+    """
+    Put helper functions here. E.g., Gait equation
+    """
+    def restrict(self, target_pos, min_pos, max_pos):
+        """
+        Clamps motor position to within min/max values 
+        """
+        if (min_pos == 0 and max_pos == 0):     # weird case, just remain unchanged
+            return target_pos
+        else:   # clamps value to limit
+            return max(min_pos, min(max_pos, target_pos))
+    
+    #********* MAIN CONTROL FUNCTION *********#
+    """
+    Defines actions for each control timestep
+    """
     def step(self):
 
-        ## ***** 1. Read the sensors ***** ##
+        ## ***** 1. Read the camera ***** ##
+
+        # Initially no image
+        img_cv = None
 
         # Get an image from the camera and convert to OpenCV format
-        img_cv = self.get_image()
+        # This only takes place every specific number of cycles depending on requested sampling rate
+        img_capture_flag = self.time_elapsed % (self.cam_cycle * self.timestep) == 0
+        if img_capture_flag:
+            img_cv = self.get_image()
+
+            # export original image and calc blur score
+            blur_score_org = self.export_img_and_calc_blur(img_cv, orginal_img=True)
+            self.blur_list_org.append(blur_score_org)
+
+            # ## Deblurring step
+            img_cv_new = self.split_deblur_merge(img_cv)
+            # img_cv_new = img_cv
+
+            # export processed image and calc blur score
+            blur_score_deblur = self.export_img_and_calc_blur(img_cv_new, orginal_img=False)
+            self.blur_list_deblur.append(blur_score_deblur)
+
+
+        # Calculate mean blurriness scores and write to file
+        if img_capture_flag:
+            mean_blur_org = np.mean(np.array(self.blur_list_org))
+            mean_blur_deblur = np.mean(np.array(self.blur_list_deblur))
+            blur_msg = f"Mean blur, before: {mean_blur_org}, after deblur: {mean_blur_deblur}"
+            self.node.get_logger().info(blur_msg)
+
+            # write metrics to file if requested
+            if self.export_imgs:
+                with open(os.path.join(self.output_dir_curr_run, '_scores.txt'), 'w') as f:
+                    f.write(f'Number of images analysed: {len(self.blur_list_org)}. Sim time: {self.time_elapsed}\n\n')
+                    f.write(blur_msg)
+                    f.write(f'\n\nFull blur score, before: {self.blur_list_org}')
+                    f.write(f'\n\nFull blur score, after: {self.blur_list_deblur}')
+
 
         ## ***** 2. Calculate output actuator commands here ***** ##
 
@@ -408,6 +673,9 @@ class SnakeRobotController:
         msg.data = set(self.target_position.flatten())
         self.pub.publish(msg)
         #rclpy.spin_once(self.node)
+
+        # NEW: update time elapsed
+        self.time_elapsed += self.timestep
 
 '''
 def main(args):
