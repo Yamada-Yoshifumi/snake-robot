@@ -1,8 +1,5 @@
 # Documentation:
 
-## NOTE TO SELF:
-Push from local main to remote branch (NOT MAIN!!): <code>git push -u shared main:jl-visual-algo</code>
-
 To start webots simulation with ROS, build the package, and do:
 
 <code>ros2 launch snake_robot snake_robot.launch.py</code>
