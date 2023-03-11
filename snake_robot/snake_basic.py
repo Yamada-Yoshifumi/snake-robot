@@ -38,9 +38,9 @@ CAMERA_RATE = 1*32   # paper used 2500ms
 
 # FOR DEBLURRING
 # Define Point Spread Fn hyperparameters
-SIZE = 2
+SIZE = 1
 SNR = 10
-ANGLE = 90
+ANGLE = 90  # This angle will be adjusted according to horizon detected
 
 
 # This class includes all key functions
@@ -55,6 +55,14 @@ class SnakeRobotController:
         Initialise (mostly) tuning and global variables for the class
         """
 
+        # Turn snake leg mode on or off
+        # Note: salamander doesn't work without legs due to lack of friction
+        # True to keep legs, False to extend legs
+        self.snake_mode = False   
+
+        # Deblur filter on/off
+        self.deblur_filter_on = True
+
         self.robot = webots_node.robot
 
         # get the time step of the current world.
@@ -67,34 +75,13 @@ class SnakeRobotController:
         self.pub = self.node.create_publisher( Float32MultiArray, 'motor', 10)
         self.node.get_logger().info(f"simulation timestep = {self.timestep} ms")    # DEBUG
 
-
-        # Turn snake leg mode on or off
-        # Note: salamander doesn't work without legs due to lack of friction
-        # True to keep legs, False to extend legs
-        self.snake_mode = False   
-
-        # Decide if to export images during simulation or not
-        self.export_imgs = False
-
         # Track elapsed time
         self.time_elapsed = 0
 
-        # Export images
-        # Create folder to export images to if selected
-        if self.export_imgs:
-            self.output_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'img_outputs')
-
-            # Create output folder
-            if not os.path.exists(self.output_dir):
-                os.mkdir(self.output_dir)
-
-            # Create folder for this run
-            self.output_dir_curr_run = os.path.join(self.output_dir, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-            os.mkdir(self.output_dir_curr_run)
-
         # Create list to store blurriness value of images
         self.blur_list_org = []
-        self.blur_list_deblur = []
+        if self.deblur_filter_on:
+            self.blur_list_deblur = []
 
         # Initial locomotion values
         self.spine_offset = 0.0  # this controls turning. negative vals to turn left, positive turns right
@@ -186,18 +173,12 @@ class SnakeRobotController:
         return img_cv
     
 
-    def export_img_and_calc_blur(self, img_cv, orginal_img):
+    def calc_blur(self, img_cv):
         """
-        Exports image and calculates its blurriness using variance of Laplacian
+        Calculates its blurriness using variance of Laplacian
             img_cv: OpenCV object in HSV format
             orginal_img: boolean for file naming purposes
         """
-        # Exports image if required
-        if self.export_imgs:
-            img_name = 'img' if orginal_img else 'img_deblur'
-            img_cv_export = cv2.cvtColor(img_cv, cv2.COLOR_HSV2RGB)
-            cv2.imwrite(os.path.join(self.output_dir_curr_run, f'{self.time_elapsed}_{img_name}.jpg'), img_cv_export)
-
         # Calculates blurriness
         # First computes the Laplacian (2nd derivative), then return variance
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_HSV2BGR)
@@ -583,33 +564,29 @@ class SnakeRobotController:
         if img_capture_flag:
             img_cv = self.get_image()
 
-            # export original image and calc blur score
-            blur_score_org = self.export_img_and_calc_blur(img_cv, orginal_img=True)
+            # calc blur score
+            blur_score_org = self.calc_blur(img_cv)
             self.blur_list_org.append(blur_score_org)
 
             # ## Deblurring step
-            img_cv_new = self.split_deblur_merge(img_cv)
-            # img_cv_new = img_cv
+            if self.deblur_filter_on:
+                img_cv = self.split_deblur_merge(img_cv)
 
-            # export processed image and calc blur score
-            blur_score_deblur = self.export_img_and_calc_blur(img_cv_new, orginal_img=False)
-            self.blur_list_deblur.append(blur_score_deblur)
+                # calc blur score
+                blur_score_deblur = self.calc_blur(img_cv)
+                self.blur_list_deblur.append(blur_score_deblur)
 
 
         # Calculate mean blurriness scores and write to file
         if img_capture_flag:
             mean_blur_org = np.mean(np.array(self.blur_list_org))
-            mean_blur_deblur = np.mean(np.array(self.blur_list_deblur))
-            blur_msg = f"Mean blur, before: {mean_blur_org}, after deblur: {mean_blur_deblur}"
-            self.node.get_logger().info(blur_msg)
 
-            # write metrics to file if requested
-            if self.export_imgs:
-                with open(os.path.join(self.output_dir_curr_run, '_scores.txt'), 'w') as f:
-                    f.write(f'Number of images analysed: {len(self.blur_list_org)}. Sim time: {self.time_elapsed}\n\n')
-                    f.write(blur_msg)
-                    f.write(f'\n\nFull blur score, before: {self.blur_list_org}')
-                    f.write(f'\n\nFull blur score, after: {self.blur_list_deblur}')
+            if self.deblur_filter_on:
+                mean_blur_deblur = np.mean(np.array(self.blur_list_deblur))
+                blur_msg = f"Mean blur, before: {mean_blur_org}, after deblur: {mean_blur_deblur}"
+            else:
+                blur_msg = f"Mean blur: {mean_blur_org}. Deblur filter is off."
+            self.node.get_logger().info(blur_msg)
 
 
         ## ***** 2. Calculate output actuator commands here ***** ##

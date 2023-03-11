@@ -12,6 +12,8 @@ COLLISION_PIXEL = 1
 FREE_PIXEL = 0
 MAP_PRECISION = 0.01
 
+MAX_GOAL_ERROR = 0.5    # Max distance to goal before considered successful. Default=0.3
+
 # Defines a node of the graph.
 class MapNode(object):
   def __init__(self, pose):
@@ -51,104 +53,6 @@ class MapNode(object):
   def cost(self, c):
     self._cost = c
 
-class MapPointNode():
-    """A node class for A* Pathfinding"""
-
-    def __init__(self, parent=None, position=None):
-        self.parent = parent
-        self.position = position
-
-        self.g = 0
-        self.h = 0
-        self.f = 0
-
-    def __eq__(self, other):
-        return self.position == other.position
-
-
-def astar(maze, start, end):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-
-    # Create start and end node
-    start_node = MapPointNode(None, start)
-    start_node.g = start_node.h = start_node.f = 0
-    end_node = MapPointNode(None, end)
-    end_node.g = end_node.h = end_node.f = 0
-
-    # Initialize both open and closed list
-    open_list = []
-    closed_list = []
-
-    # Add the start node
-    open_list.append(start_node)
-
-    # Loop until you find the end
-    while len(open_list) > 0:
-
-        # Get the current node
-        current_node = open_list[0]
-        current_index = 0
-        for index, item in enumerate(open_list):
-            if item.f < current_node.f:
-                current_node = item
-                current_index = index
-
-        # Pop current off open list, add to closed list
-        open_list.pop(current_index)
-        closed_list.append(current_node)
-
-        # Found the goal
-        if current_node == end_node:
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.position)
-                current = current.parent
-            return path[::-1] # Return reversed path
-
-        # Generate children
-        children = []
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]: # Adjacent squares
-
-            # Get node position
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-            # Make sure within range
-            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (len(maze[len(maze)-1]) -1) or node_position[1] < 0:
-                continue
-
-            # Make sure walkable terrain
-            if maze[node_position[0]][node_position[1]] != 0:
-                continue
-
-            # Create new node
-            new_node = MapPointNode(current_node, node_position)
-
-            # Append
-            children.append(new_node)
-
-        # Loop through children
-        for child in children:
-
-            # Child is on the closed list
-            for closed_child in closed_list:
-                if child == closed_child:
-                    continue
-
-            # Create the f, g, and h values
-            child.g = current_node.g + 1
-            child.h = ((child.position[0] - end_node.position[0]) ** 2) + ((child.position[1] - end_node.position[1]) ** 2)
-            child.f = child.g + child.h
-
-            # Child is already in the open list
-            for open_node in open_list:
-                if child == open_node and child.g > open_node.g:
-                    continue
-
-            # Add the child to the open list
-            open_list.append(child)
-
-
 class PathAnalyser(Node):
     
     def __init__(self):
@@ -168,7 +72,7 @@ class PathAnalyser(Node):
         self.world_map = np.zeros((int(4/MAP_PRECISION),int(4/MAP_PRECISION)), dtype=np.uint8)
         self.fig = plt.figure()
         self.start_point = [1.0, -1.0]
-        self.goal = [-2.0, 2.0]
+        self.goal = [-2.0, 2.0]    # NEW. Original: [-2.0, 2.0]. ALso tried [-1.5, 1.5]
 
         self.hl = None
         plt.plot([-2, 2], [-2, -2], 'k')
@@ -185,13 +89,21 @@ class PathAnalyser(Node):
         self.construct_world_map()
         self.gps_subscription  # prevent unused variable warning
         self.path_points = []
+        self.optimal_path = []
         self.init_pos_known = False
         self.benchmark_result = None
 
     def listener_callback(self, msg):
         #self.get_logger().info('I heard: "%s"' % msg.point)
         path_point = [msg.point.x, msg.point.y]
-        if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < 0.3**2:
+        if (path_point[0] - self.goal[0])**2 + (path_point[1] - self.goal[1])**2 < MAX_GOAL_ERROR**2: 
+
+            # Debug
+            # self.node.get_logger().info('Reached goal! Finding ideal path...')
+            # self.get_logger.info('Reached goal! Finding ideal path...')
+            # print('Reached goal! Finding ideal path...')
+            self.get_logger().info('Reached goal! Finding ideal path...')
+
             self.goal = path_point
             self.goal_reached_callback()
             self.fig.savefig("trajectory.png")
@@ -275,51 +187,33 @@ class PathAnalyser(Node):
             self.start_point = [current_object["translation"][0], current_object["translation"][1]]
 
     def goal_reached_callback(self):
-        #start_node, final_node = self.rrt()
-        self.optimal_path = astar(self.world_map.tolist(), (int((self.start_point[0]+2)/MAP_PRECISION) - 1, int((self.start_point[1]+2)/MAP_PRECISION) - 1), (int((self.goal[0]+2)/MAP_PRECISION) - 1, int((self.goal[1]+2)/MAP_PRECISION) - 1))
-        x_list = []
-        y_list = []
-        adjusted_optimal_path = []
-        for i,point in enumerate(self.optimal_path):
-            x_list.append(int(point[0])*MAP_PRECISION - 2)
-            y_list.append(int(point[1])*MAP_PRECISION - 2)
-            adjusted_optimal_path.append([int(point[0])*MAP_PRECISION - 2, int(point[1])*MAP_PRECISION - 2])
-        #if final_node is not None:
-        if len(self.optimal_path) > 0:
-            '''
+        start_node, final_node = self.rrt()
+        if final_node is not None:
             plt.scatter(final_node.position[0], final_node.position[1], s=10, marker='o', color='k')
             # Draw final path.
             v = final_node
             total_length = 0
             while v.parent is not None:
-                plt.plot([v.parent.pose[0], v.pose[0]], [v.parent.pose[1], v.pose[1]], color='blue')
+                plt.plot([v.parent.pose[0], v.pose[0]], [v.parent.pose[1], v.pose[1]], color='red')
                 self.fig.canvas.draw()
                 self.fig.canvas.flush_events()
                 self.optimal_path.insert(0, v.pose)
                 v = v.parent
                 if len(self.optimal_path) > 1:
                     total_length += np.sqrt((self.optimal_path[0][0] - self.optimal_path[1][0])**2 + (self.optimal_path[0][1] - self.optimal_path[1][1])**2)
-            '''
+        
             way_points_count = len(self.path_points)
-            
-            plt.plot(x_list, y_list, 'r')
-            '''
+            expanded_optimal_path = []
             for i,node_pos in enumerate(self.optimal_path[0:-1]):
                 segment_length = np.sqrt((self.optimal_path[i][0] - self.optimal_path[i+1][0])**2 + (self.optimal_path[i][1] - self.optimal_path[i+1][1])**2)
                 segment_way_points_count = int(way_points_count*segment_length/total_length)
                 for x_s, y_s in zip(np.linspace(self.optimal_path[i][0], self.optimal_path[i+1][0], segment_way_points_count), np.linspace(self.optimal_path[i][1], self.optimal_path[i+1][1], segment_way_points_count)):
                     if len(expanded_optimal_path) < way_points_count:
                         expanded_optimal_path.append([x_s, y_s])
-            '''
-            shrunk_adjusted_optimal_path = []
-            selection_indices = np.linspace(1, len(adjusted_optimal_path), way_points_count)
-            for index in selection_indices:
-                shrunk_adjusted_optimal_path.append(adjusted_optimal_path[int(index) - 1])
-            while len(shrunk_adjusted_optimal_path) < way_points_count:
-                shrunk_adjusted_optimal_path.append(shrunk_adjusted_optimal_path[-1])
-            self.benchmark_result =  np.array((np.array(self.path_points)-np.array(shrunk_adjusted_optimal_path))**2).mean()
+            while len(expanded_optimal_path) < way_points_count:
+                expanded_optimal_path.append(expanded_optimal_path[-1])
+            self.benchmark_result =  np.array((np.array(self.path_points)-np.array(expanded_optimal_path))**2).mean()
             plt.text(2.,2.,f"MSE = {str(self.benchmark_result)}")
-
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
@@ -333,7 +227,7 @@ class PathAnalyser(Node):
             self.get_logger.info('Goal position is not in the free space.')
             return start_node, final_node
         graph.append(start_node)
-        for _ in range(10000): 
+        for _ in range(5000): 
             position = self.sample_random_position()
             # With a random chance, draw the goal position.
             if np.random.rand() < .05:
