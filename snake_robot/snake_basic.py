@@ -194,11 +194,13 @@ class SnakeRobotController:
         return candidate_points
 
 
-    def collision_check(self, mask, points, h, w):
+    def collision_check(self, mask, points, h, w, vertical_length=False):
         """
         Calculate how long can each trajectory (represented by the end points) can travel
-        in vertical direction in image space without collision.
-        Return the number of the trajectory that can travel the longest vertical length.
+        in image space before collision.
+        
+        :param Boolean vertical_length: True for vertical length in image space
+        :return the index of the trajectory that can travel the longest length.
         """
 
         # NOTE: The following is outdated code being commented out.
@@ -228,10 +230,17 @@ class SnakeRobotController:
         mid_h = int(np.floor(h / 2))
         row_start = h - 1       # Starting point
         column_start = mid_w
-        length = np.array([0, 0, 0])        # Record (vertical) length of trajectories
+        length = np.array([0.0, 0.0, 0.0])        # Record length of trajectories
         end_flag = [False, False, False]    # Record whether a trajecory has encountered an obstacle
         step1 = (points[1][1] - mid_w) / (h - mid_h)
         step2 = (points[2][1] - mid_w) / (h - mid_h)
+
+        if vertical_length:
+            length_per_row = 1
+        else:
+            # Calculate the actual length (approximate by straignt lines) for the turning options (assume symmetric),
+            # divide by the number of rows, so this is the increment for each row
+            length_per_row = np.sqrt((points[1][1] - mid_w)**2 + (h - mid_h)**2) / (h - mid_h)
 
         # Starting from the central bottom pixel, track the trajectories by moving one row up at a time.
         # The projections of trajectories are simplified to straight lines.
@@ -254,18 +263,18 @@ class SnakeRobotController:
             if not end_flag[1]:
                 column = int(np.floor(column_start + step1*i))
                 if mask[row, column]:
-                    length[1] += 1
+                    length[1] += length_per_row
                 else:
                     end_flag[1] = True
             # Check third trajectory (turning right)
             if not end_flag[2]:
                 column = int(np.floor(column_start + step2*i))
                 if mask[row, column]:
-                    length[2] += 1
+                    length[2] += length_per_row
                 else:
                     end_flag[2] = True
 
-        # Return the number of the trajectory with the longest vertical length
+        # Return the number of the trajectory with the longest length
         self.node.get_logger().info(f"Length: {length}")
         max_length = np.max(length)
         if max_length <= h/4:       # If obstacle is already too close,
