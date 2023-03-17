@@ -354,9 +354,9 @@ class PathAnalyser(Node):
             actual_length = 0
             optimal_length = 0
             for i,point in enumerate(shrunk_adjusted_optimal_path[:-1]):
-                optimal_length += np.linalg.norm(shrunk_adjusted_optimal_path[i] - shrunk_adjusted_optimal_path[i+1])
+                optimal_length += np.linalg.norm(np.array(shrunk_adjusted_optimal_path[i]) - np.array(shrunk_adjusted_optimal_path[i+1]))
             for i,point in enumerate(self.path_points[:-1]):
-                actual_length += np.linalg.norm(self.path_points[i] - self.path_points[i+1])
+                actual_length += np.linalg.norm(np.array(self.path_points[i]) - np.array(self.path_points[i+1]))
             self.SPL_result = optimal_length/actual_length
 
     def rrt(self):
