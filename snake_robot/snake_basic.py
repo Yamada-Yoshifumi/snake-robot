@@ -33,7 +33,7 @@ MOTOR_NAMES = ["motor_1", "motor_2",     "motor_3",     "motor_4",     "motor_5"
 
 # IMAGE CAPTURE RATE FOR CAMERA
 # Write "default" to use default rate of 32 ms, but here we use slower rates as per paper
-CAMERA_RATE = 1*32   # paper used 2500ms
+CAMERA_RATE = 32  # paper used 2500ms
 # CAMERA_RATE = 'default'    
 
 # FOR DEBLURRING
@@ -160,15 +160,15 @@ class SnakeRobotController:
         # Process image into numpy array
         # img = np.frombuffer(cameraData, np.uint8).reshape((img_height, img_width, 4))
         # print(img)
-        img = np.asarray(cameraData, dtype=np.uint8)
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+        img = np.asarray(cameraData, dtype=np.uint8).reshape((80, 120, 3))
+        #img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
 
         
         # print(f"cv ver = {cv2.__version__ }")     # Debug
-        img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-
-        img_cv = cv2.rotate(img_cv, cv2.ROTATE_90_CLOCKWISE)
-        img_cv = cv2.flip(img_cv, 1)
+        #img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        img_cv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        #img_cv = cv2.rotate(img_cv, cv2.ROTATE_90_CLOCKWISE)
+        #img_cv = cv2.flip(img_cv, 1)
 
         return img_cv
     
@@ -372,7 +372,7 @@ class SnakeRobotController:
         return the end points (can be modified to return a whole trajectory).
         """
         mid_w = int(np.floor(w / 2))
-        mid_h = int(np.floor(h / 2)) #+ int(np.floor(h / 20))  # Add a tolerance because of head's vertical tilting
+        mid_h = int(np.floor(h / 2)) + int(np.floor(h / 20))  # Add a tolerance because of head's vertical tilting
 
         candidate_points = []
         # Straight forward
@@ -491,36 +491,36 @@ class SnakeRobotController:
         # take a sharp turn and its new location is out of the viewing frustrum at the old location,
         # so no need to (or actually, we cannot) test for that case.
         choice = self.collision_check(mask, candidate_points, h, w)
-
+        '''
         # Debugging!
-        # img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
-        # cv2.namedWindow("Input image")
-        # cv2.imshow("Input image", img_RGB)
-        # cv2.waitKey(0)
-        # cv2.namedWindow("Mask")
-        # cv2.imshow("Mask", mask)
-        # cv2.waitKey(0)
+        img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+        cv2.namedWindow("Input image")
+        cv2.imshow("Input image", img_RGB)
+        cv2.waitKey(0)
+        cv2.namedWindow("Mask")
+        cv2.imshow("Mask", mask)
+        cv2.waitKey(0)
 
         # Save some images for illustration
-        # if choice == 2:
-        #     img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
-        #     cv2.imwrite("/home/kaicao/right_turn_image.png", img_RGB)
-        #     self.node.get_logger().info(f"Image saved!")
-        #     cv2.imwrite("/home/kaicao/right_turn_mask.png", mask)
-        #     self.node.get_logger().info(f"Mask saved!")
-        # if choice == 1:
-        #     img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
-        #     cv2.imwrite("/home/kaicao/left_turn_image.png", img_RGB)
-        #     self.node.get_logger().info(f"Image saved!")
-        #     cv2.imwrite("/home/kaicao/left_turn_mask.png", mask)
-        #     self.node.get_logger().info(f"Mask saved!")
-        # if choice == 0:
-        #     img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
-        #     cv2.imwrite("/home/kaicao/forward_image.png", img_RGB)
-        #     self.node.get_logger().info(f"Image saved!")
-        #     cv2.imwrite("/home/kaicao/forward_mask.png", mask)
-        #     self.node.get_logger().info(f"Mask saved!")
-
+        if choice == 2:
+            img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+            cv2.imwrite("right_turn_image.png", img_RGB)
+            self.node.get_logger().info(f"Image saved!")
+            cv2.imwrite("right_turn_mask.png", mask)
+            self.node.get_logger().info(f"Mask saved!")
+        if choice == 1:
+            img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+            cv2.imwrite("left_turn_image.png", img_RGB)
+            self.node.get_logger().info(f"Image saved!")
+            cv2.imwrite("left_turn_mask.png", mask)
+            self.node.get_logger().info(f"Mask saved!")
+        if choice == 0:
+            img_RGB = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+            cv2.imwrite("forward_image.png", img_RGB)
+            self.node.get_logger().info(f"Image saved!")
+            cv2.imwrite("forward_mask.png", mask)
+            self.node.get_logger().info(f"Mask saved!")
+        '''
         if  choice == 0:
             return 0.0
         elif choice == 1:
@@ -561,10 +561,10 @@ class SnakeRobotController:
         # Get an image from the camera and convert to OpenCV format
         # This only takes place every specific number of cycles depending on requested sampling rate
         img_capture_flag = self.time_elapsed % (self.cam_cycle * self.timestep) == 0
+        
         if img_capture_flag:
-            img_cv = self.get_image()
-
             # calc blur score
+            img_cv = self.get_image()
             blur_score_org = self.calc_blur(img_cv)
             self.blur_list_org.append(blur_score_org)
 
@@ -576,7 +576,6 @@ class SnakeRobotController:
                 blur_score_deblur = self.calc_blur(img_cv)
                 self.blur_list_deblur.append(blur_score_deblur)
 
-
         # Calculate mean blurriness scores and write to file
         if img_capture_flag:
             mean_blur_org = np.mean(np.array(self.blur_list_org))
@@ -584,13 +583,12 @@ class SnakeRobotController:
             if self.deblur_filter_on:
                 mean_blur_deblur = np.mean(np.array(self.blur_list_deblur))
                 blur_msg = f"Mean blur, before: {mean_blur_org}, after deblur: {mean_blur_deblur}"
-            else:
-                blur_msg = f"Mean blur: {mean_blur_org}. Deblur filter is off."
+            #else:
+                #blur_msg = f"Mean blur: {mean_blur_org}. Deblur filter is off."
             self.node.get_logger().info(blur_msg)
 
 
         ## ***** 2. Calculate output actuator commands here ***** ##
-
         # (outdated)Make robot go straight. But if you want it to turn, then adjust accordingly
         if img_cv is not None:
             time = int(self.robot.getTime())

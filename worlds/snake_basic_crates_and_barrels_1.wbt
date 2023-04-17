@@ -141,6 +141,7 @@ Salamander {
       fieldOfView 1.22
       width 120
       height 80
+      motionBlur 64
     }
   ]
 }

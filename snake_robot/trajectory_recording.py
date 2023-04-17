@@ -318,7 +318,7 @@ class PathAnalyser(Node):
             while len(shrunk_adjusted_optimal_path) < way_points_count:
                 shrunk_adjusted_optimal_path.append(shrunk_adjusted_optimal_path[-1])
             self.benchmark_result =  np.array((np.array(self.path_points)-np.array(shrunk_adjusted_optimal_path))**2).mean()
-            plt.text(2.,2.,f"MSE = {str(self.benchmark_result)}")
+            plt.text(2.,2.,f"MSE = %.2f" % round(self.benchmark_result, 2))
 
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
