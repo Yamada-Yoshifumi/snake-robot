@@ -587,7 +587,7 @@ class SnakeRobotController:
                 #blur_msg = f"Mean blur: {mean_blur_org}. Deblur filter is off."
             self.node.get_logger().info(blur_msg)
 
-
+        img_cv = self.get_image()
         ## ***** 2. Calculate output actuator commands here ***** ##
         # (outdated)Make robot go straight. But if you want it to turn, then adjust accordingly
         if img_cv is not None:

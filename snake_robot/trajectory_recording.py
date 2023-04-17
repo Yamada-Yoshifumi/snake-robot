@@ -163,6 +163,11 @@ class PathAnalyser(Node):
             'mse_value',
             10
         )
+        self.trajectory_spl_publisher = self.create_publisher(
+            Float64,
+            'spl_value',
+            10
+        )
         self.declare_parameter('world_file')
         self.world_file = str(self.get_parameter('world_file').value)
         self.world_map = np.zeros((int(4/MAP_PRECISION),int(4/MAP_PRECISION)), dtype=np.uint8)
@@ -187,6 +192,8 @@ class PathAnalyser(Node):
         self.path_points = []
         self.init_pos_known = False
         self.benchmark_result = None
+        self.SPL_result = None
+
 
     def listener_callback(self, msg):
         #self.get_logger().info('I heard: "%s"' % msg.point)
@@ -198,6 +205,9 @@ class PathAnalyser(Node):
             msg = Float64()
             msg.data = self.benchmark_result
             self.trajectory_mse_publisher.publish(msg)
+            msg = Float64()
+            msg.data = self.SPL_result
+            self.trajectory_spl_publisher.publish(msg)
             raise SystemExit
         
         if not self.init_pos_known:
@@ -322,6 +332,14 @@ class PathAnalyser(Node):
 
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
+
+            actual_length = 0
+            optimal_length = 0
+            for i,point in enumerate(shrunk_adjusted_optimal_path[:-1]):
+                optimal_length += np.linalg.norm(np.array(shrunk_adjusted_optimal_path[i]) - np.array(shrunk_adjusted_optimal_path[i+1]))
+            for i,point in enumerate(self.path_points[:-1]):
+                actual_length += np.linalg.norm(np.array(self.path_points[i]) - np.array(self.path_points[i+1]))
+            self.SPL_result = optimal_length/actual_length
 
     def rrt(self):
         # RRT builds a graph one node at a time.
